@@ -1,3 +1,4 @@
+import { router } from 'expo-router';
 import React, { useState } from 'react';
 import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -16,6 +17,10 @@ export default function LoginScreen() {
     console.log('Google login pressed');
     // TODO: Connect to /oauth2/authorization/google later
   };
+
+    const goToSignUp = () => {
+      router.push('../sign-up');
+    }
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -63,7 +68,7 @@ export default function LoginScreen() {
           {/* Register Placeholder */}
           <View style={styles.footer}>
             <Text style={styles.footerText}>Don't have an account?</Text>
-            <TouchableOpacity>
+            <TouchableOpacity onPress={goToSignUp}>
               <Text style={styles.signupText}>Sign up</Text>
             </TouchableOpacity>
           </View>
