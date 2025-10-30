@@ -1,4 +1,4 @@
-import { useRouter,Link} from 'expo-router';
+import { useRouter } from 'expo-router';
 
 import React, { useState } from 'react';
 import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
@@ -58,7 +58,7 @@ export default function SignUpScreen() {
   };
 
   const returnToLogin = () => {
-    router.push('/(tabs)/login');
+    router.back();
   }
 
     return (

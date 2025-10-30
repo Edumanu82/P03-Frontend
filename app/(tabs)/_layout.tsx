@@ -14,7 +14,7 @@ export default function Layout() {
 
       {/* Login Screen */}
       <Tabs.Screen
-        name="login"
+        name="index"
         options={{
           title: 'Login',
           tabBarIcon: ({ color, size }) => (
@@ -24,7 +24,7 @@ export default function Layout() {
       />
       {/* Home Screen */}
       <Tabs.Screen
-        name="index"
+        name="home"
         options={{
           title: 'Home',
           tabBarIcon: ({ color, size }) => (
