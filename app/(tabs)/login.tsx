@@ -171,7 +171,7 @@ export default function LoginScreen() {
           {/* Register Placeholder */}
           <View style={styles.footer}>
             <Text style={styles.footerText}>Don't have an account?</Text>
-            <TouchableOpacity>
+            <TouchableOpacity onPress={goToSignUp}>
               <Text style={styles.signupText}>Sign up</Text>
             </TouchableOpacity>
           </View>
