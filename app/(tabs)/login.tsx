@@ -2,6 +2,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useNavigation } from "@react-navigation/native";
 import * as AuthSession from 'expo-auth-session';
 import * as Google from 'expo-auth-session/providers/google';
+import { router } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
 import React, { useEffect, useState } from "react";
 import { Alert, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
@@ -112,6 +113,10 @@ export default function LoginScreen() {
     console.log('Password:', password);
     // TODO: Implement app-based login (API call to backend)
   };
+
+  const goToSignUp = () => {
+    router.push('../sign-up');
+  }
 
   return (
     <SafeAreaView style={styles.safeArea}>
