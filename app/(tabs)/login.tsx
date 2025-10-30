@@ -28,21 +28,18 @@ export default function LoginScreen() {
   const [password, setPassword] = useState("");
 
   const redirectUri = AuthSession.makeRedirectUri({
-    native: 'com.example.P03Frontend://',
+    native: 'com.example.p03frontend://',
   });
 
   const [request, response, promptAsync] = Google.useAuthRequest({
     androidClientId: "27161815233-7sd29e6sk9080nkrs1s1019vl67c12ra.apps.googleusercontent.com",
     webClientId: "27161815233-vijpk8qqje593atia2iaq33s9hfjgs8o.apps.googleusercontent.com",
+    redirectUri: redirectUri,
   });
 
   console.log(redirectUri);
 
   useEffect(() => {
-    console.log('===================');
-    console.log('OAuth Response Type:', response?.type);
-    console.log('Full Response:', response);
-    console.log('===================');
     setUsername('');
     setPassword('');
     console.log('OAuth Response:', response);
@@ -69,6 +66,7 @@ export default function LoginScreen() {
           await AsyncStorage.setItem("username", JSON.stringify(user));
           await AsyncStorage.setItem("userID", user.id || "");
           setUserInfo(user);
+          await WebBrowser.dismissBrowser();
           navigation.navigate("index");
 
           // Show welcome message after navigation
