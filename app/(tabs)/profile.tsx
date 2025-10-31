@@ -76,7 +76,9 @@ export default function ProfileScreen() {
         {/* User Info */}
         <View style={styles.profileCard}>
           <Image
-            source={{ uri: user?.picture || 'https://via.placeholder.com/100' }}
+            source={user?.picture ? { 
+              uri: `${user.picture}?t=${Date.now()}` 
+            } : require('../../assets/images/profilepic.png')}
             style={styles.avatar}
           />
           <View>
