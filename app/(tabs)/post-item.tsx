@@ -1,11 +1,15 @@
 import React, { useState } from 'react';
-import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity } from 'react-native';
+import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, useWindowDimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function PostItemScreen() {
+  const { width } = useWindowDimensions();
   const [title, setTitle] = useState('');
   const [price, setPrice] = useState('');
   const [description, setDescription] = useState('');
+
+  const isLargeScreen = width > 768;
+  const containerWidth = isLargeScreen ? Math.min(600, width * 0.9) : '100%';
 
   const handlePost = () => {
     console.log({ title, price, description });
@@ -19,37 +23,39 @@ export default function PostItemScreen() {
         style={styles.container}
       >
         <ScrollView contentContainerStyle={styles.scroll}>
-          <Text style={styles.header}>List a New Item</Text>
+          <View style={[styles.formContainer, { width: containerWidth }]}>
+            <Text style={styles.header}>List a New Item</Text>
 
-          <TextInput
-            placeholder="Item Title"
-            placeholderTextColor="#888"
-            style={styles.input}
-            value={title}
-            onChangeText={setTitle}
-          />
+            <TextInput
+              placeholder="Item Title"
+              placeholderTextColor="#888"
+              style={styles.input}
+              value={title}
+              onChangeText={setTitle}
+            />
 
-          <TextInput
-            placeholder="Price"
-            placeholderTextColor="#888"
-            style={styles.input}
-            keyboardType="numeric"
-            value={price}
-            onChangeText={setPrice}
-          />
+            <TextInput
+              placeholder="Price"
+              placeholderTextColor="#888"
+              style={styles.input}
+              keyboardType="numeric"
+              value={price}
+              onChangeText={setPrice}
+            />
 
-          <TextInput
-            placeholder="Description"
-            placeholderTextColor="#888"
-            multiline
-            style={[styles.input, styles.textArea]}
-            value={description}
-            onChangeText={setDescription}
-          />
+            <TextInput
+              placeholder="Description"
+              placeholderTextColor="#888"
+              multiline
+              style={[styles.input, styles.textArea]}
+              value={description}
+              onChangeText={setDescription}
+            />
 
-          <TouchableOpacity style={styles.button} onPress={handlePost}>
-            <Text style={styles.buttonText}>Post Item</Text>
-          </TouchableOpacity>
+            <TouchableOpacity style={styles.button} onPress={handlePost}>
+              <Text style={styles.buttonText}>Post Item</Text>
+            </TouchableOpacity>
+          </View>
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -65,11 +71,17 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scroll: {
+    flexGrow: 1,
+    alignItems: 'center',
     paddingHorizontal: 20,
-    paddingBottom: 40,
+    paddingVertical: 40,
+  },
+  formContainer: {
+    width: '100%',
+    maxWidth: 600,
   },
   header: {
-    fontSize: 26,
+    fontSize: 28,
     fontWeight: 'bold',
     marginBottom: 30,
     textAlign: 'center',
@@ -79,7 +91,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#ccc',
     borderRadius: 10,
-    padding: 12,
+    padding: 14,
     fontSize: 16,
     backgroundColor: '#f9f9f9',
     marginBottom: 20,

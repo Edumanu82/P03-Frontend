@@ -1,16 +1,21 @@
 import { useRouter } from 'expo-router';
 
 import React, { useState } from 'react';
-import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, useWindowDimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+
 export default function SignUpScreen() {
   const router = useRouter();
+  const { width } = useWindowDimensions();
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   type Errors = { username?: string; email?: string; password?: string; confirmPassword?: string };
   const [errors, setErrors] = useState<Errors>({});
   const [confirmPassword, setConfirmPassword] = useState('');
+
+  const isLargeScreen = width > 768;
+  const containerWidth = isLargeScreen ? Math.min(450, width * 0.9) : '100%';
 
   const isValidEmail = (email: string) =>  /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
   const getPasswordStrength = (password: string) => {
@@ -61,10 +66,11 @@ export default function SignUpScreen() {
     router.back();
   }
 
-    return (
-      <SafeAreaView style={styles.safeArea}>
-        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.container}>
-          <ScrollView contentContainerStyle={styles.scroll}>
+  return (
+    <SafeAreaView style={styles.safeArea}>
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.container}>
+        <ScrollView contentContainerStyle={styles.scroll}>
+          <View style={[styles.formContainer, { width: containerWidth }]}>
             <Text style={styles.title}>Join the Hood</Text>
   
             <View style={styles.form}>
@@ -72,7 +78,7 @@ export default function SignUpScreen() {
               {/* Username Section */}
               <TextInput
                 style={styles.input}
-                placeholder="Jane_Doe123"
+                placeholder="Username"
                 placeholderTextColor="#888"
                 keyboardType="default"
                 value={username}
@@ -157,10 +163,11 @@ export default function SignUpScreen() {
                 <Text style={styles.loginText}>Login</Text>
               </TouchableOpacity>
             </View>
-          </ScrollView>
-        </KeyboardAvoidingView>
-      </SafeAreaView>
-    );
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
+  );
 }
 
 const styles = StyleSheet.create({
@@ -174,11 +181,16 @@ const styles = StyleSheet.create({
   scroll: {
     flexGrow: 1,
     justifyContent: 'center',
+    alignItems: 'center',
     paddingHorizontal: 24,
-    paddingBottom: 40,
+    paddingVertical: 40,
+  },
+  formContainer: {
+    width: '100%',
+    maxWidth: 450,
   },
   title: {
-    fontSize: 28,
+    fontSize: 32,
     fontWeight: 'bold',
     marginBottom: 40,
     textAlign: 'center',
@@ -191,16 +203,17 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#ccc',
     borderRadius: 10,
-    padding: 12,
+    padding: 14,
     marginBottom: 16,
     fontSize: 16,
     backgroundColor: '#f9f9f9',
   },
   signUpButton: {
     backgroundColor: '#2e7bff',
-    paddingVertical: 15,
+    paddingVertical: 16,
     borderRadius: 10,
     alignItems: 'center',
+    marginTop: 8,
   },
   signUpButtonText: {
     color: '#fff',
@@ -235,11 +248,9 @@ const styles = StyleSheet.create({
     color: '#2e7bff',
     fontWeight: '600',
   },
-    // --- added styles for strength + errors ---
   strengthRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: -8, marginBottom: 8 },
   strengthBg: { flex: 1, height: 8, borderRadius: 999, backgroundColor: '#e5e7eb' },
   strengthFill: { height: 8, borderRadius: 999, backgroundColor: '#22c55e' },
   strengthLabel: { fontSize: 12, color: '#4b5563', marginLeft: 8 },
   error: { color: '#dc2626', marginTop: -8, marginBottom: 8, fontSize: 13 },
-  // 
 });

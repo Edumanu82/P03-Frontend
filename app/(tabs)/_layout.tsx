@@ -20,6 +20,8 @@ export default function Layout() {
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="log-in-outline" color={color} size={size} />
           ),
+          tabBarStyle: { display: 'none' },
+          href: null,
         }}
       />
       {/* Home Screen */}

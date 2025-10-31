@@ -1,4 +1,4 @@
-import { FlatList, Image, StyleSheet, Text, TouchableOpacity } from 'react-native';
+import { FlatList, Image, StyleSheet, Text, TouchableOpacity, View, useWindowDimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 const sampleItems = [
@@ -8,20 +8,31 @@ const sampleItems = [
 ];
 
 export default function HomeScreen() {
+  const { width } = useWindowDimensions();
+  
+  const numColumns = width > 1200 ? 3 : width > 768 ? 2 : 1;
+  const isMultiColumn = numColumns > 1;
+
   return (
     <SafeAreaView style={styles.safeArea}>
-      <Text style={styles.header}>HoodDeals</Text>
-      <FlatList
-        data={sampleItems}
-        keyExtractor={(item) => item.id}
-        renderItem={({ item }) => (
-          <TouchableOpacity style={styles.card}>
-            <Image source={{ uri: item.image }} style={styles.image} />
-            <Text style={styles.title}>{item.title}</Text>
-            <Text style={styles.price}>{item.price}</Text>
-          </TouchableOpacity>
-        )}
-      />
+      <View style={styles.container}>
+        <Text style={styles.header}>HoodDeals</Text>
+        <FlatList
+          data={sampleItems}
+          keyExtractor={(item) => item.id}
+          numColumns={numColumns}
+          key={numColumns} 
+          columnWrapperStyle={isMultiColumn ? styles.row : undefined}
+          contentContainerStyle={styles.listContent}
+          renderItem={({ item }) => (
+            <TouchableOpacity style={[styles.card, { width: isMultiColumn ? `${100 / numColumns - 2}%` : '100%' }]}>
+              <Image source={{ uri: item.image }} style={styles.image} />
+              <Text style={styles.title}>{item.title}</Text>
+              <Text style={styles.price}>{item.price}</Text>
+            </TouchableOpacity>
+          )}
+        />
+      </View>
     </SafeAreaView>
   );
 }
@@ -29,15 +40,28 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    paddingTop: 30,
     backgroundColor: '#fff',
+  },
+  container: {
+    flex: 1,
+    maxWidth: 1400, 
+    width: '100%',
+    alignSelf: 'center',
     paddingHorizontal: 16,
   },
   header: {
     fontSize: 28,
     fontWeight: 'bold',
+    marginTop: 20,
     marginBottom: 16,
     textAlign: 'center',
+  },
+  listContent: {
+    paddingBottom: 20,
+  },
+  row: {
+    justifyContent: 'space-between',
+    marginBottom: 10,
   },
   card: {
     marginBottom: 20,
@@ -47,8 +71,9 @@ const styles = StyleSheet.create({
   },
   image: {
     width: '100%',
-    height: 150,
+    height: 200,
     borderRadius: 10,
+    resizeMode: 'cover',
   },
   title: {
     fontSize: 18,
@@ -61,4 +86,3 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
 });
-
