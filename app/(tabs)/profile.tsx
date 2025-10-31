@@ -1,26 +1,73 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useFocusEffect } from '@react-navigation/native';
+import { useRouter } from 'expo-router'; // ✅ added for redirect
+import React, { useCallback, useEffect, useState } from 'react';
 import { FlatList, Image, StyleSheet, Text, TouchableOpacity, View, useWindowDimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-
-const user = {
-  name: 'John Doe',
-  email: 'johndoe@gmail.com',
-  profilePic: require('../../assets/images/profilepic.png'),
-};
 
 const userItems = [
   { id: '1', title: 'PS5 Console', price: '$400' },
   { id: '2', title: 'IKEA Desk', price: '$60' },
 ];
 
+type StoredUser = { name?: string; email?: string; picture?: string } | null;
+
+const STORAGE_KEYS_TO_TRY = ['user', 'username', 'profile', 'authUser'];
+
+async function loadUserFromStorage(): Promise<StoredUser> {
+  for (const key of STORAGE_KEYS_TO_TRY) {
+    const raw = await AsyncStorage.getItem(key);
+    if (!raw) continue;
+
+    try {
+      const parsed = JSON.parse(raw);
+      if (parsed && (parsed.name || parsed.email || parsed.picture)) return parsed;
+      if (parsed?.user && (parsed.user.name || parsed.user.email || parsed.user.picture)) return parsed.user;
+    } catch {
+      return { name: raw };
+    }
+  }
+  return null;
+}
+
 export default function ProfileScreen() {
   const { width } = useWindowDimensions();
+  const [user, setUser] = useState<StoredUser>(null);
+  const router = useRouter(); // ✅ new line for navigation
 
   const isLargeScreen = width > 768;
   const containerWidth = isLargeScreen ? Math.min(700, width * 0.9) : '100%';
 
-  const handleLogout = () => {
-    // TODO: Implement logout functionality later
-    console.log('User logged out');
+  const refreshUser = useCallback(async () => {
+    try {
+      const u = await loadUserFromStorage();
+      setUser(u);
+    } catch (e) {
+      console.error('Error loading user info:', e);
+      setUser(null);
+    }
+  }, []);
+
+  useEffect(() => {
+    refreshUser();
+  }, [refreshUser]);
+
+  useFocusEffect(
+    useCallback(() => {
+      refreshUser();
+    }, [refreshUser])
+  );
+
+  const handleLogout = async () => {
+    try {
+      await AsyncStorage.clear();
+      setUser(null);
+      console.log('User logged out');
+      router.replace('/');
+
+    } catch (error) {
+      console.error('Logout failed:', error);
+    }
   };
 
   return (
@@ -28,10 +75,13 @@ export default function ProfileScreen() {
       <View style={[styles.contentContainer, { width: containerWidth }]}>
         {/* User Info */}
         <View style={styles.profileCard}>
-        <Image source={user.profilePic} style={styles.avatar} />
+          <Image
+            source={{ uri: user?.picture || 'https://via.placeholder.com/100' }}
+            style={styles.avatar}
+          />
           <View>
-            <Text style={styles.name}>{user.name}</Text>
-            <Text style={styles.email}>{user.email}</Text>
+            <Text style={styles.name}>{user?.name || 'Guest User'}</Text>
+            <Text style={styles.email}>{user?.email || 'No email available'}</Text>
           </View>
         </View>
 
