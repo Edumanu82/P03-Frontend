@@ -1,6 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect } from '@react-navigation/native';
-import { useRouter } from 'expo-router'; // ✅ added for redirect
+import { useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useState } from 'react';
 import { FlatList, Image, StyleSheet, Text, TouchableOpacity, View, useWindowDimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -33,7 +33,7 @@ async function loadUserFromStorage(): Promise<StoredUser> {
 export default function ProfileScreen() {
   const { width } = useWindowDimensions();
   const [user, setUser] = useState<StoredUser>(null);
-  const router = useRouter(); // ✅ new line for navigation
+  const router = useRouter(); 
 
   const isLargeScreen = width > 768;
   const containerWidth = isLargeScreen ? Math.min(700, width * 0.9) : '100%';
