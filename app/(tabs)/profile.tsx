@@ -1,10 +1,10 @@
-import { FlatList, Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { FlatList, Image, StyleSheet, Text, TouchableOpacity, View, useWindowDimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 const user = {
   name: 'John Doe',
   email: 'johndoe@gmail.com',
-  profilePic: 'https://via.placeholder.com/100',
+  profilePic: require('../../assets/images/profilepic.png'),
 };
 
 const userItems = [
@@ -13,6 +13,11 @@ const userItems = [
 ];
 
 export default function ProfileScreen() {
+  const { width } = useWindowDimensions();
+
+  const isLargeScreen = width > 768;
+  const containerWidth = isLargeScreen ? Math.min(700, width * 0.9) : '100%';
+
   const handleLogout = () => {
     // TODO: Implement logout functionality later
     console.log('User logged out');
@@ -20,39 +25,41 @@ export default function ProfileScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      {/* User Info */}
-      <View style={styles.profileCard}>
-        <Image source={{ uri: user.profilePic }} style={styles.avatar} />
-        <View>
-          <Text style={styles.name}>{user.name}</Text>
-          <Text style={styles.email}>{user.email}</Text>
+      <View style={[styles.contentContainer, { width: containerWidth }]}>
+        {/* User Info */}
+        <View style={styles.profileCard}>
+        <Image source={user.profilePic} style={styles.avatar} />
+          <View>
+            <Text style={styles.name}>{user.name}</Text>
+            <Text style={styles.email}>{user.email}</Text>
+          </View>
         </View>
+
+        {/* My Listings */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>My Listings</Text>
+          <FlatList
+            data={userItems}
+            keyExtractor={(item) => item.id}
+            renderItem={({ item }) => (
+              <View style={styles.listingCard}>
+                <Text style={styles.itemTitle}>{item.title}</Text>
+                <Text style={styles.itemPrice}>{item.price}</Text>
+              </View>
+            )}
+          />
+        </View>
+
+        {/* Edit Profile Button */}
+        <TouchableOpacity style={styles.editButton}>
+          <Text style={styles.editButtonText}>Edit Profile</Text>
+        </TouchableOpacity>
+
+        {/* Logout Button */}
+        <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
+          <Text style={styles.logoutButtonText}>Log Out</Text>
+        </TouchableOpacity>
       </View>
-
-      {/* My Listings */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>My Listings</Text>
-        <FlatList
-          data={userItems}
-          keyExtractor={(item) => item.id}
-          renderItem={({ item }) => (
-            <View style={styles.listingCard}>
-              <Text style={styles.itemTitle}>{item.title}</Text>
-              <Text style={styles.itemPrice}>{item.price}</Text>
-            </View>
-          )}
-        />
-      </View>
-
-      {/* Edit Profile Button */}
-      <TouchableOpacity style={styles.editButton}>
-        <Text style={styles.editButtonText}>Edit Profile</Text>
-      </TouchableOpacity>
-
-      {/* Logout Button */}
-      <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-        <Text style={styles.logoutButtonText}>Log Out</Text>
-      </TouchableOpacity>
     </SafeAreaView>
   );
 }
@@ -61,13 +68,19 @@ const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: '#f5f5f5',
+    alignItems: 'center',
+  },
+  contentContainer: {
+    flex: 1,
+    width: '100%',
+    maxWidth: 700,
     paddingHorizontal: 20,
   },
   profileCard: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#fff',
-    padding: 15,
+    padding: 20,
     borderRadius: 12,
     marginTop: 20,
     marginBottom: 25,
@@ -102,7 +115,7 @@ const styles = StyleSheet.create({
   },
   listingCard: {
     backgroundColor: '#fff',
-    padding: 12,
+    padding: 14,
     borderRadius: 10,
     marginBottom: 10,
     flexDirection: 'row',

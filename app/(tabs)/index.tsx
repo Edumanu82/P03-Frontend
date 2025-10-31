@@ -5,7 +5,7 @@ import * as Google from 'expo-auth-session/providers/google';
 import { router } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
 import React, { useEffect, useState } from "react";
-import { Alert, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Alert, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, useWindowDimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 WebBrowser.maybeCompleteAuthSession();
@@ -22,11 +22,15 @@ const showAlert = (title: string, message: string) => {
 
 export default function LoginScreen() {
   const navigation = useNavigation<any>();
+  const { width } = useWindowDimensions();
   const [email, setEmail] = useState("");
   const [userInfo, setUserInfo] = useState(null);
   const [loading, setLoading] = useState(false);
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+
+  const isLargeScreen = width > 768;
+  const containerWidth = isLargeScreen ? Math.min(450, width * 0.9) : '100%';
 
   const redirectUri = AuthSession.makeRedirectUri({
     native: 'com.example.p03frontend://',
@@ -70,7 +74,6 @@ export default function LoginScreen() {
           await WebBrowser.dismissBrowser();
           navigation.navigate("home");
 
-          // Show welcome message after navigation
           setTimeout(() => {
             showAlert("Success", `Welcome ${user.name}!`);
           }, 1000);
@@ -122,63 +125,64 @@ export default function LoginScreen() {
     <SafeAreaView style={styles.safeArea}>
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.container}>
         <ScrollView contentContainerStyle={styles.scroll}>
-          <Text style={styles.title}>Welcome to HoodDeals</Text>
+          <View style={[styles.formContainer, { width: containerWidth }]}>
+            <Text style={styles.title}>Welcome to HoodDeals</Text>
 
-          {/* Email Login Section */}
-          <View style={styles.form}>
-            <TextInput
-              style={styles.input}
-              placeholder="Email"
-              placeholderTextColor="#888"
-              keyboardType="email-address"
-              value={email}
-              onChangeText={setEmail}
-            />
+            {/* Email Login Section */}
+            <View style={styles.form}>
+              <TextInput
+                style={styles.input}
+                placeholder="Email"
+                placeholderTextColor="#888"
+                keyboardType="email-address"
+                value={email}
+                onChangeText={setEmail}
+              />
 
-            <TextInput
-              style={styles.input}
-              placeholder="Password"
-              placeholderTextColor="#888"
-              secureTextEntry
-              value={password}
-              onChangeText={setPassword}
-            />
+              <TextInput
+                style={styles.input}
+                placeholder="Password"
+                placeholderTextColor="#888"
+                secureTextEntry
+                value={password}
+                onChangeText={setPassword}
+              />
 
-            <TouchableOpacity style={styles.loginButton} onPress={handleLogin}>
-              <Text style={styles.loginButtonText}>Login</Text>
-            </TouchableOpacity>
-          </View>
-
-          {/* Divider */}
-          <View style={styles.dividerContainer}>
-            <View style={styles.line} />
-            <Text style={styles.dividerText}>OR</Text>
-            <View style={styles.line} />
-          </View>
-
-
-          <TouchableOpacity
-            style={styles.googleButton}
-            onPress={() => promptAsync()}
-            disabled={!request || loading}
-            activeOpacity={0.8}
-          >
-            <View style={styles.googleButtonContent}>
-              <View style={styles.googleIconContainer}>
-                <Text style={styles.googleIcon}>G</Text>
-              </View>
-              <Text style={styles.googleButtonText}>
-                {loading ? 'Signing in...' : 'Sign in with Google'}
-              </Text>
+              <TouchableOpacity style={styles.loginButton} onPress={handleLogin}>
+                <Text style={styles.loginButtonText}>Login</Text>
+              </TouchableOpacity>
             </View>
-          </TouchableOpacity>
 
-          {/* Register Placeholder */}
-          <View style={styles.footer}>
-            <Text style={styles.footerText}>Don't have an account?</Text>
-            <TouchableOpacity onPress={goToSignUp}>
-              <Text style={styles.signupText}>Sign up</Text>
+            {/* Divider */}
+            <View style={styles.dividerContainer}>
+              <View style={styles.line} />
+              <Text style={styles.dividerText}>OR</Text>
+              <View style={styles.line} />
+            </View>
+
+            <TouchableOpacity
+              style={styles.googleButton}
+              onPress={() => promptAsync()}
+              disabled={!request || loading}
+              activeOpacity={0.8}
+            >
+              <View style={styles.googleButtonContent}>
+                <View style={styles.googleIconContainer}>
+                  <Text style={styles.googleIcon}>G</Text>
+                </View>
+                <Text style={styles.googleButtonText}>
+                  {loading ? 'Signing in...' : 'Sign in with Google'}
+                </Text>
+              </View>
             </TouchableOpacity>
+
+            {/* Register Placeholder */}
+            <View style={styles.footer}>
+              <Text style={styles.footerText}>Don't have an account?</Text>
+              <TouchableOpacity onPress={goToSignUp}>
+                <Text style={styles.signupText}>Sign up</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -197,11 +201,16 @@ const styles = StyleSheet.create({
   scroll: {
     flexGrow: 1,
     justifyContent: 'center',
+    alignItems: 'center',
     paddingHorizontal: 24,
-    paddingBottom: 40,
+    paddingVertical: 40,
+  },
+  formContainer: {
+    width: '100%',
+    maxWidth: 450,
   },
   title: {
-    fontSize: 28,
+    fontSize: 32,
     fontWeight: 'bold',
     marginBottom: 40,
     textAlign: 'center',
@@ -214,14 +223,14 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#ccc',
     borderRadius: 10,
-    padding: 12,
+    padding: 14,
     marginBottom: 16,
     fontSize: 16,
     backgroundColor: '#f9f9f9',
   },
   loginButton: {
     backgroundColor: '#2e7bff',
-    paddingVertical: 15,
+    paddingVertical: 16,
     borderRadius: 10,
     alignItems: 'center',
   },
@@ -260,7 +269,7 @@ const styles = StyleSheet.create({
   },
   googleButton: {
     backgroundColor: '#fff',
-    paddingVertical: 12,
+    paddingVertical: 14,
     paddingHorizontal: 16,
     borderRadius: 10,
     alignItems: 'center',
