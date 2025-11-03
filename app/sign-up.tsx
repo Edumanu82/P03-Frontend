@@ -62,7 +62,10 @@ export default function SignUpScreen() {
         Alert.alert('Signup Failed', data.error || 'Unknown error');
         return;
       }
-
+      setEmail('');
+      setUsername('');
+      setPassword('');
+      setConfirmPassword('');
       Alert.alert('Signup Successful');
       router.back(); 
 
@@ -73,6 +76,10 @@ export default function SignUpScreen() {
   };
 
   const returnToLogin = () => {
+    setEmail('');
+    setUsername('');
+    setPassword('');
+    setConfirmPassword('');
     router.back();
   };
 
