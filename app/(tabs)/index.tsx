@@ -49,11 +49,17 @@ export default function LoginScreen() {
 
     if (response?.type === "success") {
       console.log('OAuth Success - Access Token:', response.authentication?.accessToken);
+      setEmail('');
+      setPassword('');
       handleSignInWithGoogle();
     } else if (response?.type === "error") {
+      setEmail('');
+      setPassword('');
       console.error("Google sign-in error:", response.error);
       showAlert("Error", "Failed to sign in with Google");
     } else if (response?.type === "cancel") {
+      setEmail('');
+      setPassword('');
       console.log("User cancelled Google sign-in");
     }
   }, [response]);
@@ -153,6 +159,8 @@ export default function LoginScreen() {
   
       if (!response.ok) {
         showAlert("Login Failed", data.error || "Invalid credentials");
+        setEmail('');
+        setPassword('');
         return;
       }
   
@@ -160,6 +168,8 @@ export default function LoginScreen() {
         await AsyncStorage.setItem("token", data.token);
         await AsyncStorage.setItem("username", JSON.stringify(data.user));
         await AsyncStorage.setItem("userID", data.user.id.toString());
+        setEmail('');
+        setPassword('');
   
         router.push("/home");
   
@@ -167,6 +177,8 @@ export default function LoginScreen() {
       }
     } catch (error) {
       console.error("Login error:", error);
+      setEmail('');
+      setPassword('');
       showAlert("Error", "Network error or backend not reachable");
     } finally {
       setLoading(false);
@@ -175,6 +187,8 @@ export default function LoginScreen() {
   
 
   const goToSignUp = () => {
+    setEmail('');
+    setPassword('');
     router.push('../sign-up');
   }
 
