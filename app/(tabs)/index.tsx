@@ -42,8 +42,6 @@ export default function LoginScreen() {
     redirectUri: redirectUri,
   });
 
-  console.log(redirectUri);
-
   useEffect(() => {
     setUsername('');
     setPassword('');
@@ -63,20 +61,42 @@ export default function LoginScreen() {
   async function handleSignInWithGoogle() {
     try {
       setLoading(true);
-
+  
       if (response?.type === "success" && response.authentication?.accessToken) {
         const user = await getUserInfo(response.authentication.accessToken);
-
+  
         if (user) {
-          await AsyncStorage.setItem("username", JSON.stringify(user));
-          await AsyncStorage.setItem("userID", user.id || "");
-          setUserInfo(user);
-          await WebBrowser.dismissBrowser();
-          navigation.navigate("home");
-
-          setTimeout(() => {
-            showAlert("Success", `Welcome ${user.name}!`);
-          }, 1000);
+          // Send user info to your Spring Boot backend
+          const encoded = btoa(`user:password`);
+          const backendResponse = await fetch('https://hood-deals-3827cb9a0599.herokuapp.com/api/auth/google', {
+            method: 'POST',
+            headers: {
+              "Authorization": `Basic ${encoded}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              id: user.id,
+              email: user.email,
+              name: user.name,
+              picture: user.picture,
+            }),
+          });
+  
+          const data = await backendResponse.json();
+          
+          if (data.token) {
+            await AsyncStorage.setItem("token", data.token);
+            await AsyncStorage.setItem("username", JSON.stringify(data.user));
+            await AsyncStorage.setItem("userID", data.user.id.toString());
+            
+            setUserInfo(data.user);
+            await WebBrowser.dismissBrowser();
+            navigation.navigate("home");
+  
+            setTimeout(() => {
+              showAlert("Success", `Welcome ${data.user.name}!`);
+            }, 1000);
+          }
         }
       }
     } catch (error) {
@@ -111,11 +131,48 @@ export default function LoginScreen() {
     }
   };
 
-  const handleLogin = () => {
-    console.log('Email:', email);
-    console.log('Password:', password);
-    // TODO: Implement app-based login (API call to backend)
+  const handleLogin = async () => {
+    if (!email || !password) {
+      showAlert("Error", "Please enter both email and password");
+      return;
+    }
+  
+    try {
+      setLoading(true);
+      const encoded = btoa(`user:password`);
+      const response = await fetch('https://hood-deals-3827cb9a0599.herokuapp.com/api/auth/login', {
+        method: "POST",
+        headers: {  
+         "Authorization": `Basic ${encoded}`,
+         "Content-Type": "application/json", 
+        },
+        body: JSON.stringify({ email, password }),
+      });
+  
+      const data = await response.json();
+  
+      if (!response.ok) {
+        showAlert("Login Failed", data.error || "Invalid credentials");
+        return;
+      }
+  
+      if (data.token) {
+        await AsyncStorage.setItem("token", data.token);
+        await AsyncStorage.setItem("username", JSON.stringify(data.user));
+        await AsyncStorage.setItem("userID", data.user.id.toString());
+  
+        router.push("/home");
+  
+        showAlert("Success", `Welcome back, ${data.user.name}!`);
+      }
+    } catch (error) {
+      console.error("Login error:", error);
+      showAlert("Error", "Network error or backend not reachable");
+    } finally {
+      setLoading(false);
+    }
   };
+  
 
   const goToSignUp = () => {
     router.push('../sign-up');

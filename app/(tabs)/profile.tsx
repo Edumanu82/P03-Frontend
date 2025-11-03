@@ -73,8 +73,9 @@ function ItemDetailModal({
   const { width } = useWindowDimensions();
   const isLarge = width > 768;
 
+
   const cardWidth = useMemo(() => {
-    const max = 520; // desktop/tablet max width
+    const max = 520; 
     return isLarge ? Math.min(max, width * 0.6) : Math.min(520, width * 0.9);
   }, [isLarge, width]);
 
@@ -87,9 +88,9 @@ function ItemDetailModal({
       transparent
       onRequestClose={onClose} 
     >
-      {/* Backdrop */}
+    
       <Pressable style={styles.backdrop} onPress={onClose}>
-        {/* Stop backdrop presses from closing when tapping inside the card */}
+
         <Pressable style={[styles.modalCard, { width: cardWidth }]} onPress={() => {}}>
           {item.imageUrl ? (
             <Image source={{ uri: item.imageUrl }} style={styles.modalImage} />
@@ -110,14 +111,12 @@ function ItemDetailModal({
           <View style={styles.modalActions}>
             <TouchableOpacity style={[styles.actionBtn, styles.actionSecondary]} onPress={onClose}>
               <Text style={styles.actionSecondaryText}>Close</Text>
-                </TouchableOpacity>
-              <TouchableOpacity style={[styles.deleteBtn]} onPress={onClose}>
-              <Text style={styles.actionSecondaryText}>Delete</Text>
             </TouchableOpacity>
-          
+            <TouchableOpacity style={styles.deleteBtn} onPress={onClose}>
+              <Text style={styles.actionSecondaryText}>Delete listing </Text>
+            </TouchableOpacity>
           </View>
-          
-      </Pressable>
+        </Pressable>
       </Pressable>
     </Modal>
   );
@@ -207,7 +206,7 @@ export default function ProfileScreen() {
             )}
           />
         </View>
-
+          
         {/* Edit Profile Button */}
         <TouchableOpacity style={styles.editButton}>
           <Text style={styles.editButtonText}>Edit Profile</Text>
@@ -218,7 +217,7 @@ export default function ProfileScreen() {
           <Text style={styles.logoutButtonText}>Log Out</Text>
         </TouchableOpacity>
       </View>
-            
+
 
       {/* Item Detail Modal */}
       <ItemDetailModal item={selectedItem} visible={!!selectedItem} onClose={closeModal} />
@@ -331,7 +330,6 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     backgroundColor: '#ff4d4d',
   },
-
   actionPrimary: { backgroundColor: '#2e7bff' },
   actionPrimaryText: { color: '#fff', fontWeight: '700' },
   actionSecondary: { backgroundColor: '#efefef' },

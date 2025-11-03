@@ -1,7 +1,6 @@
 import { useRouter } from 'expo-router';
-
 import React, { useState } from 'react';
-import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, useWindowDimensions } from 'react-native';
+import { Alert, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, useWindowDimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function SignUpScreen() {
@@ -17,9 +16,10 @@ export default function SignUpScreen() {
   const isLargeScreen = width > 768;
   const containerWidth = isLargeScreen ? Math.min(450, width * 0.9) : '100%';
 
-  const isValidEmail = (email: string) =>  /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
+  const isValidEmail = (email: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
+
   const getPasswordStrength = (password: string) => {
-    if(!password)return {pct:0, label:'Add Password'};
+    if(!password) return {pct:0, label:'Add Password'};
     let strength = 0;
     if (password.length >= 8) strength += 1;
     if(/[a-z]/.test(password)) strength += 1;
@@ -28,8 +28,10 @@ export default function SignUpScreen() {
     if (/[^A-Za-z0-9]/.test(password)) strength += 1;
     const labels = ['Very Weak', 'Weak', 'Moderate', 'Strong', 'Very Strong'];
     return { pct: (strength / 5) * 100, label: labels[strength - 1] || '' };
-  }
+  };
+
   const passwordStrength = getPasswordStrength(password);
+
   const isFormValid = () => {
     const newErrors: Errors = {};
     if (!username) newErrors.username = 'Username is required';
@@ -40,31 +42,39 @@ export default function SignUpScreen() {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSignUp = () => {
-    if (!isFormValid()) {
-      console.log('Form is invalid');
-      return;
-    }
+  const handleSignUp = async () => {
+    if (!isFormValid()) return;
 
-    // TODO: Implement username, email, password validation/restration logic
-    console.log('Username:', username);
-    console.log('Email:', email);
-    console.log('Password:', password);
-    console.log('Confirm Password:', confirmPassword);
-    if (password !== confirmPassword) {
-      console.log('Passwords do not match');
-      alert('Passwords do not match');
-      return;
-    }else {
-      console.log('Passwords match');
-      // TODO: Implement password encryption
-      // TODO: Implement app-based SignUp (API call to backend to create new user)
+    try {
+      const encoded = btoa(`user:password`);
+      const response = await fetch('https://hood-deals-3827cb9a0599.herokuapp.com/api/auth/signup', {
+        method: 'POST',
+        headers: {
+          "Authorization": `Basic ${encoded}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email, password, name: username })
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        Alert.alert('Signup Failed', data.error || 'Unknown error');
+        return;
+      }
+
+      Alert.alert('Signup Successful');
+      router.back(); 
+
+    } catch (err) {
+      console.error(err);
+      Alert.alert('Signup Error', 'Network error or backend not reachable');
     }
   };
 
   const returnToLogin = () => {
     router.back();
-  }
+  };
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -74,47 +84,33 @@ export default function SignUpScreen() {
             <Text style={styles.title}>Join the Hood</Text>
   
             <View style={styles.form}>
-
-              {/* Username Section */}
               <TextInput
                 style={styles.input}
                 placeholder="Username"
                 placeholderTextColor="#888"
                 keyboardType="default"
                 value={username}
-                onChangeText={(t) => {
-                  setUsername(t);
-                  if (errors.username) setErrors(prev => ({ ...prev, username: undefined }));
-                }}
+                onChangeText={(t) => { setUsername(t); if(errors.username) setErrors(prev => ({...prev, username: undefined})); }}
               />
-              {!!errors.username && (<Text style={styles.error}>{errors.username}</Text>
-              )}
+              {!!errors.username && (<Text style={styles.error}>{errors.username}</Text>)}
 
-              {/* Email Section */}
               <TextInput
                 style={styles.input}
                 placeholder="Email"
                 placeholderTextColor="#888"
                 keyboardType="email-address"
                 value={email}
-                onChangeText={(t) => {
-                  setEmail(t);
-                  if (errors.email) setErrors(prev => ({ ...prev, email: undefined }));
-                }}
+                onChangeText={(t) => { setEmail(t); if(errors.email) setErrors(prev => ({...prev, email: undefined})); }}
               />
               {!!errors.email && <Text style={styles.error}>{errors.email}</Text>}
 
-              {/* Password Section */}
               <TextInput
                 style={styles.input}
                 placeholder="Password"
                 placeholderTextColor="#888"
                 secureTextEntry
                 value={password}
-                onChangeText={(t) => {
-                  setPassword(t);
-                  if (errors.password) setErrors(prev => ({ ...prev, password: undefined }));
-                }}
+                onChangeText={(t) => { setPassword(t); if(errors.password) setErrors(prev => ({...prev, password: undefined})); }}
               />
               {!!password && (
                 <View style={styles.strengthRow}>
@@ -124,20 +120,15 @@ export default function SignUpScreen() {
                   <Text style={styles.strengthLabel}>{passwordStrength.label}</Text>
                 </View>
               )}
-              {!!errors.password && (<Text style={styles.error}>{errors.password}</Text>
-              )}
+              {!!errors.password && (<Text style={styles.error}>{errors.password}</Text>)}
 
-              {/* Confirm Password Section */}
               <TextInput
                 style={styles.input}
                 placeholder="Re-enter Password"
                 placeholderTextColor="#888"
                 secureTextEntry
                 value={confirmPassword}
-                onChangeText={(t) => {
-                  setConfirmPassword(t);
-                  if (errors.confirmPassword) setErrors(prev => ({ ...prev, confirmPassword: undefined }));
-                }}
+                onChangeText={(t) => { setConfirmPassword(t); if(errors.confirmPassword) setErrors(prev => ({...prev, confirmPassword: undefined})); }}
               />
               {!!confirmPassword && password !== confirmPassword && (
                 <Text style={styles.error}>Passwords do not match</Text>
@@ -149,14 +140,12 @@ export default function SignUpScreen() {
               </TouchableOpacity>
             </View>
   
-            {/* Divider */}
             <View style={styles.dividerContainer}>
               <View style={styles.line} />
               <Text style={styles.dividerText}>OR</Text>
               <View style={styles.line} />
             </View>
   
-            {/* Register Placeholder */}
             <View style={styles.footer}>
               <Text style={styles.footerText}>Already have an account?</Text>
               <TouchableOpacity onPress={returnToLogin}>
@@ -169,6 +158,7 @@ export default function SignUpScreen() {
     </SafeAreaView>
   );
 }
+
 
 const styles = StyleSheet.create({
   safeArea: {
