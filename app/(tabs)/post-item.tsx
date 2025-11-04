@@ -1,19 +1,128 @@
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { router } from 'expo-router';
 import React, { useState } from 'react';
-import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, useWindowDimensions } from 'react-native';
+import {
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+  useWindowDimensions
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+
+const showAlert = (title: string, message: string) => {
+  if (Platform.OS === 'android') {
+    setTimeout(() => {
+      Alert.alert(title, message);
+    }, 500);
+  } else {
+    Alert.alert(title, message);
+  }
+};
 
 export default function PostItemScreen() {
   const { width } = useWindowDimensions();
   const [title, setTitle] = useState('');
   const [price, setPrice] = useState('');
   const [description, setDescription] = useState('');
+  const [imageUrl, setImageUrl] = useState('');
+  const [category, setCategory] = useState('');
+  const [location, setLocation] = useState('');
+  const [user_id, setUserId] = useState('');
+  const [loading, setLoading] = useState(false);
 
   const isLargeScreen = width > 768;
   const containerWidth = isLargeScreen ? Math.min(600, width * 0.9) : '100%';
 
-  const handlePost = () => {
-    console.log({ title, price, description });
-    // TODO: send POST request to backend when API is ready
+  const handlePost = async () => {
+    // Validation
+    if (!title.trim()) {
+      showAlert("Error", "Please enter an item title");
+      return;
+    }
+
+    if (!price.trim()) {
+      showAlert("Error", "Please enter a price");
+      return;
+    }
+
+    const priceNumber = parseFloat(price);
+    if (isNaN(priceNumber) || priceNumber <= 0) {
+      showAlert("Error", "Please enter a valid price");
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const token = await AsyncStorage.getItem("token");
+
+      console.log("=== Posting Listing ===");
+      console.log("Token exists:", !!token);
+
+      if (!token) {
+        showAlert("Error", "You must be logged in to post items");
+        router.push('/');
+        return;
+      }
+
+      const requestBody = {
+        title: title.trim(),
+        description: description.trim() || null,
+        price: priceNumber,
+        imageUrl: imageUrl.trim() || null,
+        category: category.trim() || null,
+        location: location.trim() || null,
+        user_id: await AsyncStorage.getItem("userID"),
+      };
+
+      console.log("Sending request body:", JSON.stringify(requestBody, null, 2));
+      const encoded = btoa(`user:password`);
+      const response = await fetch('https://hood-deals-3827cb9a0599.herokuapp.com/api/listings', {
+        method: 'POST',
+        headers: {
+          "Authorization": `Basic ${encoded}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(requestBody),
+      });
+
+      console.log("Response status:", response.status);
+      
+      const data = await response.json();
+      console.log("Response data:", data);
+
+      if (!response.ok) {
+        showAlert("Error", data.error || data.message || "Failed to create listing");
+        return;
+      }
+
+      // Success!
+      showAlert("Success", "Your item has been listed!");
+      
+      // Clear the form
+      setTitle('');
+      setPrice('');
+      setDescription('');
+      setImageUrl('');
+      setCategory('');
+      setLocation('');
+
+      // Navigate back to home
+      setTimeout(() => {
+        router.push('/home');
+      }, 1000);
+
+    } catch (error) {
+      console.error("Post item error:", error);
+      showAlert("Error", "Network error. Please check your connection and try again.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -26,25 +135,31 @@ export default function PostItemScreen() {
           <View style={[styles.formContainer, { width: containerWidth }]}>
             <Text style={styles.header}>List a New Item</Text>
 
+            <Text style={styles.label}>Title *</Text>
             <TextInput
-              placeholder="Item Title"
+              placeholder="What are you selling?"
               placeholderTextColor="#888"
               style={styles.input}
               value={title}
               onChangeText={setTitle}
             />
 
-            <TextInput
-              placeholder="Price"
-              placeholderTextColor="#888"
-              style={styles.input}
-              keyboardType="numeric"
-              value={price}
-              onChangeText={setPrice}
-            />
+            <Text style={styles.label}>Price *</Text>
+            <View style={styles.priceContainer}>
+              <Text style={styles.dollarSign}>$</Text>
+              <TextInput
+                placeholder="0.00"
+                placeholderTextColor="#888"
+                style={[styles.input, styles.priceInput]}
+                keyboardType="decimal-pad"
+                value={price}
+                onChangeText={setPrice}
+              />
+            </View>
 
+            <Text style={styles.label}>Description</Text>
             <TextInput
-              placeholder="Description"
+              placeholder="Describe your item in detail..."
               placeholderTextColor="#888"
               multiline
               style={[styles.input, styles.textArea]}
@@ -52,8 +167,51 @@ export default function PostItemScreen() {
               onChangeText={setDescription}
             />
 
-            <TouchableOpacity style={styles.button} onPress={handlePost}>
-              <Text style={styles.buttonText}>Post Item</Text>
+            <Text style={styles.label}>Image URL</Text>
+            <TextInput
+              placeholder="https://example.com/image.jpg"
+              placeholderTextColor="#888"
+              style={styles.input}
+              value={imageUrl}
+              onChangeText={setImageUrl}
+              autoCapitalize="none"
+              keyboardType="url"
+            />
+
+            <Text style={styles.label}>Category</Text>
+            <TextInput
+              placeholder="e.g., Electronics, Furniture, Clothing"
+              placeholderTextColor="#888"
+              style={styles.input}
+              value={category}
+              onChangeText={setCategory}
+            />
+
+            <Text style={styles.label}>Location</Text>
+            <TextInput
+              placeholder="Where is this item located?"
+              placeholderTextColor="#888"
+              style={styles.input}
+              value={location}
+              onChangeText={setLocation}
+            />
+
+            <TouchableOpacity 
+              style={[styles.button, loading && styles.buttonDisabled]} 
+              onPress={handlePost}
+              disabled={loading}
+            >
+              <Text style={styles.buttonText}>
+                {loading ? 'Posting...' : 'Post Item'}
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity 
+              style={styles.cancelButton} 
+              onPress={() => router.back()}
+              disabled={loading}
+            >
+              <Text style={styles.cancelButtonText}>Cancel</Text>
             </TouchableOpacity>
           </View>
         </ScrollView>
@@ -87,6 +245,13 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     color: '#111',
   },
+  label: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#111',
+    marginBottom: 8,
+    marginTop: 5,
+  },
   input: {
     borderWidth: 1,
     borderColor: '#ccc',
@@ -95,6 +260,21 @@ const styles = StyleSheet.create({
     fontSize: 16,
     backgroundColor: '#f9f9f9',
     marginBottom: 20,
+  },
+  priceContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  dollarSign: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#111',
+    marginRight: 8,
+  },
+  priceInput: {
+    flex: 1,
+    marginBottom: 0,
   },
   textArea: {
     height: 120,
@@ -106,8 +286,23 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     marginTop: 10,
   },
+  buttonDisabled: {
+    opacity: 0.6,
+  },
   buttonText: {
     color: '#fff',
+    fontSize: 17,
+    fontWeight: '600',
+    textAlign: 'center',
+  },
+  cancelButton: {
+    backgroundColor: '#f0f0f0',
+    paddingVertical: 16,
+    borderRadius: 10,
+    marginTop: 15,
+  },
+  cancelButtonText: {
+    color: '#666',
     fontSize: 17,
     fontWeight: '600',
     textAlign: 'center',
