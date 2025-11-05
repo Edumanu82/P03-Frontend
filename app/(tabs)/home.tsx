@@ -32,6 +32,7 @@ type Listing = {
   description?: string;
   price: number;
   imageUrl?: string | null;
+  image_url?: string | null; 
   status?: string;
   category?: string;
   location?: string;
@@ -127,10 +128,12 @@ useFocusEffect(
         source={{
           uri:
             item.imageUrl ||
+            item.image_url ||
             "https://via.placeholder.com/300x200.png?text=No+Image",
         }}
-        style={styles.image}
+        style={[styles.image, { resizeMode: "cover" }]}
       />
+
       <Text style={styles.title}>{item.title}</Text>
       <Text style={styles.price}>${item.price}</Text>
       <Text style={styles.category}>{item.category}</Text>
@@ -177,19 +180,22 @@ useFocusEffect(
                       {selectedListing.title}
                     </Text>
 
-                    <Image
-                      source={{
-                        uri:
-                          selectedListing.imageUrl ||
-                          "https://via.placeholder.com/400x300.png?text=No+Image",
-                      }}
-                      style={{
-                        width: "100%",
-                        height: 220,
-                        borderRadius: 10,
-                        marginBottom: 15,
-                      }}
-                    />
+<Image
+  source={{
+    uri:
+      selectedListing.imageUrl ||
+      selectedListing.image_url ||
+      "https://via.placeholder.com/400x300.png?text=No+Image",
+  }}
+  style={{
+    width: "100%",
+    height: 220,
+    borderRadius: 10,
+    marginBottom: 15,
+    resizeMode: "contain",
+  }}
+/>
+
 
                     <Text
                       style={{
