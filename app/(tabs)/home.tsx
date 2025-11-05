@@ -1,6 +1,6 @@
-import { useNavigation } from "@react-navigation/native";
+import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import {
   FlatList,
   Image,
@@ -48,13 +48,14 @@ export default function HomeScreen() {
   const numColumns = 2;
   const isMultiColumn = numColumns > 1;
 
-  useEffect(() => {
+useFocusEffect(
+  React.useCallback(() => {
     const fetchListings = async () => {
       try {
         setLoading(true);
 
-        const username = "user"; // from SecurityConfig
-        const password = "password"; // same as inMemoryUserDetailsManager
+        const username = "user";
+        const password = "password";
         const base64Credentials = btoa(`${username}:${password}`);
 
         const response = await fetch(
@@ -68,13 +69,10 @@ export default function HomeScreen() {
           }
         );
 
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
+        if (!response.ok) throw new Error(`HTTP error! ${response.status}`);
 
         const data = await response.json();
         setListings(data);
-        console.log("Fetched listings:", data);
       } catch (err) {
         console.error("Error fetching listings:", err);
         setError("Failed to load listings.");
@@ -84,9 +82,10 @@ export default function HomeScreen() {
     };
 
     fetchListings();
-  }, []);
+  }, [])
+);
 
-  // ✅ Error or loading state (optional UI)
+
   if (loading) {
     return (
       <SafeAreaView style={styles.safeArea}>
@@ -105,7 +104,6 @@ export default function HomeScreen() {
     );
   }
 
-  // ✅ Main view
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.container}>
