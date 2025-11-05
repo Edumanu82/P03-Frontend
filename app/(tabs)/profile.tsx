@@ -359,6 +359,7 @@ const styles = StyleSheet.create({
     height: 160,
     borderRadius: 10,
     marginBottom: 4,
+    resizeMode: 'contain',
   },
   modalImagePlaceholder: {
     backgroundColor: '#f1f1f1',
