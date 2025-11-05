@@ -74,7 +74,7 @@ export default function PostItemScreen() {
         title: title.trim(),
         description: description.trim() || null,
         price: priceNumber,
-        imageUrl: imageUrl.trim() || null,
+        imageUrl: imageUrl.trim(),
         category: category.trim() || null,
         location: location.trim() || null,
         user_id: await AsyncStorage.getItem("userID"),

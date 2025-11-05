@@ -23,23 +23,6 @@ type Item = {
   imageUrl?: string;
 };
 
-const userItems: Item[] = [
-  {
-    id: '1',
-    title: 'PS5 Console',
-    price: '$400',
-    description: 'Gently used PS5 with one DualSense controller and HDMI cable.',
-    imageUrl: undefined,
-  },
-  {
-    id: '2',
-    title: 'IKEA Desk',
-    price: '$60',
-    description: 'Simple, sturdy desk (100x60cm). Small scratch on the surface.',
-    imageUrl: undefined,
-  },
-];
-
 type StoredUser = { name?: string; email?: string; picture?: string } | null;
 
 const STORAGE_KEYS_TO_TRY = ['user', 'username', 'profile', 'authUser'];
@@ -125,7 +108,8 @@ function ItemDetailModal({
 
 export default function ProfileScreen() {
   const { width } = useWindowDimensions();
-  const [user, setUser] = useState<StoredUser>(null);
+  const [user, setUser] = useState<StoredUser>(null); // <-- user is defined here
+  const [userItems, setUserItems] = useState<Item[]>([]);
   const router = useRouter();
 
   const [selectedItem, setSelectedItem] = useState<Item | null>(null);
@@ -141,6 +125,77 @@ export default function ProfileScreen() {
       setUser(null);
     }
   }, []);
+
+  useEffect(() => {
+    refreshUser();
+  }, [refreshUser]);
+
+  useFocusEffect(
+    useCallback(() => {
+      refreshUser();
+    }, [refreshUser])
+  );
+
+  // ✅ Fetch listings for the logged-in user
+useEffect(() => {
+  const fetchListings = async () => {
+    try {
+      if (!user?.name && !user?.email) return;
+
+      // ✅ Basic Auth credentials
+      const username = 'user';       // your backend username
+      const password = 'password';   // your backend password
+      const authHeader = 'Basic ' + btoa(`${username}:${password}`);
+
+      const response = await fetch(
+        'https://hood-deals-3827cb9a0599.herokuapp.com/api/listings',
+        {
+          headers: {
+            'Authorization': authHeader,
+            'Content-Type': 'application/json',
+          },
+        }
+      );
+
+      if (!response.ok) {
+        console.error('Server error:', response.status);
+        return;
+      }
+
+      // ✅ Safely handle empty or invalid JSON
+      const text = await response.text();
+      if (!text) {
+        console.warn('Empty response from server');
+        return;
+      }
+
+      const data = JSON.parse(text);
+
+      // ✅ Filter listings for the logged-in user
+      const filtered = data.filter(
+        (item: any) =>
+          item.userName?.toLowerCase() === user?.name?.toLowerCase()
+      );
+
+      const mapped = filtered.map((item: any) => ({
+        id: item.id.toString(),
+        title: item.title,
+        price: `$${item.price}`,
+        description: item.description,
+        imageUrl: item.image_url,
+      }));
+
+      setUserItems(mapped);
+    } catch (err) {
+      console.error('Error fetching listings:', err);
+    }
+  };
+
+  fetchListings();
+}, [user]);
+
+
+
 
   useEffect(() => {
     refreshUser();
@@ -304,6 +359,7 @@ const styles = StyleSheet.create({
     height: 160,
     borderRadius: 10,
     marginBottom: 4,
+    resizeMode: 'contain',
   },
   modalImagePlaceholder: {
     backgroundColor: '#f1f1f1',
