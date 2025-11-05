@@ -3,48 +3,62 @@ import { StyleSheet } from "react-native";
 export const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: "#f8f8f8",
+    backgroundColor: "#F9F9F9",
+    paddingTop: 20, // adds breathing room at the top
   },
+
   container: {
     flex: 1,
-    padding: 10,
+    backgroundColor: "#F9F9F9",
+    paddingHorizontal: 10,
   },
+
   listContent: {
+    paddingTop: 20,
     paddingBottom: 80,
   },
+
   row: {
     justifyContent: "space-between",
+    marginBottom: 16,
   },
+
   card: {
     backgroundColor: "#fff",
-    borderRadius: 10,
+    borderRadius: 12,
     padding: 10,
-    marginBottom: 15,
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.15,
+    shadowRadius: 6,
     elevation: 3,
+    marginBottom: 10,
   },
+
   image: {
     width: "100%",
     height: 120,
-    borderRadius: 8,
+    borderRadius: 10,
+    resizeMode: "cover",
     marginBottom: 8,
   },
+
   title: {
     fontSize: 16,
-    fontWeight: "bold",
-    color: "#333",
+    fontWeight: "600",
+    color: "#222",
   },
+
   price: {
-    fontSize: 14,
-    color: "green",
-    marginTop: 4,
+    fontSize: 15,
+    fontWeight: "600",
+    color: "#2E8B57", // green price
+    marginTop: 2,
   },
+
   category: {
     fontSize: 13,
-    color: "#666",
-    marginTop: 2,
+    color: "#777",
+    marginTop: 4,
   },
 });
