@@ -107,35 +107,37 @@ useFocusEffect(
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.container}>
-        <FlatList
-          data={listings}
-          keyExtractor={(item) => item.id.toString()}
-          numColumns={numColumns}
-          key={numColumns}
-          columnWrapperStyle={isMultiColumn ? styles.row : undefined}
-          contentContainerStyle={styles.listContent}
-          renderItem={({ item }) => (
-            <TouchableOpacity
-              style={[styles.card, { width: isMultiColumn ? "48%" : "100%" }]}
-              onPress={() => {
-                setSelectedListing(item);
-                setModalVisible(true);
-              }}
-            >
-              <Image
-                source={{
-                  uri:
-                    item.imageUrl ||
-                    "https://via.placeholder.com/300x200.png?text=No+Image",
-                }}
-                style={styles.image}
-              />
-              <Text style={styles.title}>{item.title}</Text>
-              <Text style={styles.price}>${item.price}</Text>
-              <Text style={styles.category}>{item.category}</Text>
-            </TouchableOpacity>
-          )}
-        />
+<FlatList
+  data={listings}
+  keyExtractor={(item) => item.id.toString()}
+  numColumns={numColumns}
+  key={numColumns}
+  columnWrapperStyle={isMultiColumn ? styles.row : undefined}
+  contentContainerStyle={styles.listContent}
+  ListHeaderComponent={<Text style={styles.appTitle}>HoodDeals</Text>}
+  renderItem={({ item }) => (
+    <TouchableOpacity
+      style={[styles.card, { width: isMultiColumn ? "48%" : "100%" }]}
+      onPress={() => {
+        setSelectedListing(item);
+        setModalVisible(true);
+      }}
+    >
+      <Image
+        source={{
+          uri:
+            item.imageUrl ||
+            "https://via.placeholder.com/300x200.png?text=No+Image",
+        }}
+        style={styles.image}
+      />
+      <Text style={styles.title}>{item.title}</Text>
+      <Text style={styles.price}>${item.price}</Text>
+      <Text style={styles.category}>{item.category}</Text>
+    </TouchableOpacity>
+  )}
+/>
+
 
         {/* ✅ Listing Details Modal */}
         <Modal

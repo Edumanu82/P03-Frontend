@@ -13,10 +13,19 @@ export const styles = StyleSheet.create({
     paddingHorizontal: 10,
   },
 
-  listContent: {
-    paddingTop: 20,
-    paddingBottom: 80,
-  },
+listContent: {
+  paddingTop: 60,    // adds space above the top listings
+  paddingBottom: 80,
+  paddingHorizontal: 10,
+},
+
+appTitle: {
+  fontSize: 26,
+  fontWeight: "700",
+  color: "#2e7bff",
+  textAlign: "center",
+  marginBottom: 20,
+},
 
   row: {
     justifyContent: "space-between",
