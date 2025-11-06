@@ -3,6 +3,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
+  Alert,
   FlatList,
   Image,
   Modal,
@@ -43,40 +44,80 @@ async function loadUserFromStorage(): Promise<StoredUser> {
   return null;
 }
 
-
 function ItemDetailModal({
   item,
   visible,
   onClose,
+  refreshListings,
 }: {
   item: Item | null;
   visible: boolean;
   onClose: () => void;
+  refreshListings: () => void;
 }) {
   const { width } = useWindowDimensions();
   const isLarge = width > 768;
 
-
   const cardWidth = useMemo(() => {
-    const max = 520; 
+    const max = 520;
     return isLarge ? Math.min(max, width * 0.6) : Math.min(520, width * 0.9);
   }, [isLarge, width]);
 
   if (!item) return null;
 
-  return (
-    <Modal
-      visible={visible}
-      animationType="fade"
-      transparent
-      onRequestClose={onClose} 
-    >
-    
-      <Pressable style={styles.backdrop} onPress={onClose}>
+  // ✅ Delete listing handler
+  const handleDelete = async () => {
+    Alert.alert(
+      'Confirm Delete',
+      'Are you sure you want to delete this listing?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              const username = 'user';
+              const password = 'password';
+              const authHeader = 'Basic ' + btoa(`${username}:${password}`);
 
+                const response = await fetch(
+                  `https://hood-deals-3827cb9a0599.herokuapp.com/api/listings/${item.id}`,
+
+                {
+                  method: 'DELETE',
+                  headers: {
+                    'Authorization': authHeader,
+                    'Content-Type': 'application/json',
+                  },
+                }
+              );
+
+              if (!response.ok) {
+                console.error('Failed to delete listing:', response.status);
+                Alert.alert('Error', `Failed to delete listing: ${response.status}`);
+                return;
+              }
+
+              console.log('Listing deleted successfully');
+              onClose();
+              refreshListings(); // ✅ Refresh list after delete
+            } catch (err) {
+              console.error('Error deleting listing:', err);
+              Alert.alert('Error', 'An error occurred while deleting the listing.');
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  return (
+    <Modal visible={visible} animationType="fade" transparent onRequestClose={onClose}>
+      <Pressable style={styles.backdrop} onPress={onClose}>
         <Pressable style={[styles.modalCard, { width: cardWidth }]} onPress={() => {}}>
           {item.imageUrl ? (
-            <Image source={{ uri: item.imageUrl }} style={styles.modalImage} />
+            <Image source={{ uri: item.imageUrl }} style={styles.modalImage} resizeMode="contain" />
           ) : (
             <View style={[styles.modalImage, styles.modalImagePlaceholder]}>
               <Text style={{ color: '#666' }}>No image</Text>
@@ -86,17 +127,15 @@ function ItemDetailModal({
           <View style={{ gap: 6 }}>
             <Text style={styles.modalTitle}>{item.title}</Text>
             <Text style={styles.modalPrice}>{item.price}</Text>
-            {!!item.description && (
-              <Text style={styles.modalDescription}>{item.description}</Text>
-            )}
+            {!!item.description && <Text style={styles.modalDescription}>{item.description}</Text>}
           </View>
 
           <View style={styles.modalActions}>
             <TouchableOpacity style={[styles.actionBtn, styles.actionSecondary]} onPress={onClose}>
               <Text style={styles.actionSecondaryText}>Close</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.deleteBtn} onPress={onClose}>
-              <Text style={styles.actionSecondaryText}>Delete listing </Text>
+            <TouchableOpacity style={styles.deleteBtn} onPress={handleDelete}>
+              <Text style={styles.actionSecondaryText}>Delete listing</Text>
             </TouchableOpacity>
           </View>
         </Pressable>
@@ -105,14 +144,13 @@ function ItemDetailModal({
   );
 }
 
-
 export default function ProfileScreen() {
   const { width } = useWindowDimensions();
-  const [user, setUser] = useState<StoredUser>(null); // <-- user is defined here
+  const [user, setUser] = useState<StoredUser>(null);
   const [userItems, setUserItems] = useState<Item[]>([]);
+  const [selectedItem, setSelectedItem] = useState<Item | null>(null);
   const router = useRouter();
 
-  const [selectedItem, setSelectedItem] = useState<Item | null>(null);
   const isLargeScreen = width > 768;
   const containerWidth = isLargeScreen ? Math.min(700, width * 0.9) : '100%';
 
@@ -126,25 +164,13 @@ export default function ProfileScreen() {
     }
   }, []);
 
-  useEffect(() => {
-    refreshUser();
-  }, [refreshUser]);
-
-  useFocusEffect(
-    useCallback(() => {
-      refreshUser();
-    }, [refreshUser])
-  );
-
-  // ✅ Fetch listings for the logged-in user
-useEffect(() => {
+  // ✅ Define fetchListings here so it’s accessible everywhere
   const fetchListings = async () => {
     try {
       if (!user?.name && !user?.email) return;
 
-      // ✅ Basic Auth credentials
-      const username = 'user';       // your backend username
-      const password = 'password';   // your backend password
+      const username = 'user';
+      const password = 'password';
       const authHeader = 'Basic ' + btoa(`${username}:${password}`);
 
       const response = await fetch(
@@ -162,7 +188,6 @@ useEffect(() => {
         return;
       }
 
-      // ✅ Safely handle empty or invalid JSON
       const text = await response.text();
       if (!text) {
         console.warn('Empty response from server');
@@ -171,7 +196,6 @@ useEffect(() => {
 
       const data = JSON.parse(text);
 
-      // ✅ Filter listings for the logged-in user
       const filtered = data.filter(
         (item: any) =>
           item.userName?.toLowerCase() === user?.name?.toLowerCase()
@@ -191,12 +215,6 @@ useEffect(() => {
     }
   };
 
-  fetchListings();
-}, [user]);
-
-
-
-
   useEffect(() => {
     refreshUser();
   }, [refreshUser]);
@@ -206,6 +224,10 @@ useEffect(() => {
       refreshUser();
     }, [refreshUser])
   );
+
+  useEffect(() => {
+    fetchListings();
+  }, [user]);
 
   const handleLogout = async () => {
     try {
@@ -223,7 +245,6 @@ useEffect(() => {
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={[styles.contentContainer, { width: containerWidth }]}>
-        {/* User Info */}
         <View style={styles.profileCard}>
           <Image
             source={
@@ -239,43 +260,47 @@ useEffect(() => {
           </View>
         </View>
 
-        {/* My Listings */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>My Listings</Text>
-          <FlatList
-            data={userItems}
-            keyExtractor={(item) => item.id}
-            contentContainerStyle={{ paddingBottom: 8 }}
-            renderItem={({ item }) => (
-              <TouchableOpacity style={styles.listingCard} onPress={() => onPressItem(item)}>
-                <View>
-                  <Text style={styles.itemTitle}>{item.title}</Text>
-                  {!!item.description && (
-                    <Text numberOfLines={1} style={styles.itemSubtitle}>
-                      {item.description}
-                    </Text>
-                  )}
-                </View>
-                <Text style={styles.itemPrice}>{item.price}</Text>
-              </TouchableOpacity>
-            )}
-          />
+          {userItems.length > 0 ? (
+            <FlatList
+              data={userItems}
+              keyExtractor={(item) => item.id}
+              contentContainerStyle={{ paddingBottom: 8 }}
+              renderItem={({ item }) => (
+                <TouchableOpacity style={styles.listingCard} onPress={() => onPressItem(item)}>
+                  <View>
+                    <Text style={styles.itemTitle}>{item.title}</Text>
+                    {!!item.description && (
+                      <Text numberOfLines={1} style={styles.itemSubtitle}>
+                        {item.description}
+                      </Text>
+                    )}
+                  </View>
+                  <Text style={styles.itemPrice}>{item.price}</Text>
+                </TouchableOpacity>
+              )}
+            />
+          ) : (
+            <Text style={{ textAlign: 'center', color: '#777', marginTop: 10 }}>No listings yet.</Text>
+          )}
         </View>
-          
-        {/* Edit Profile Button */}
+
         <TouchableOpacity style={styles.editButton}>
           <Text style={styles.editButtonText}>Edit Profile</Text>
         </TouchableOpacity>
 
-        {/* Logout Button */}
         <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
           <Text style={styles.logoutButtonText}>Log Out</Text>
         </TouchableOpacity>
       </View>
 
-
-      {/* Item Detail Modal */}
-      <ItemDetailModal item={selectedItem} visible={!!selectedItem} onClose={closeModal} />
+      <ItemDetailModal
+        item={selectedItem}
+        visible={!!selectedItem}
+        onClose={closeModal}
+        refreshListings={fetchListings}
+      />
     </SafeAreaView>
   );
 }
@@ -335,8 +360,6 @@ const styles = StyleSheet.create({
     marginBottom: 25,
   },
   logoutButtonText: { color: '#fff', fontSize: 16, fontWeight: '600' },
-
-  /* Modal styles */
   backdrop: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.35)',
@@ -356,10 +379,9 @@ const styles = StyleSheet.create({
   },
   modalImage: {
     width: '100%',
-    height: 160,
+    height: 220,
     borderRadius: 10,
     marginBottom: 4,
-    resizeMode: 'contain',
   },
   modalImagePlaceholder: {
     backgroundColor: '#f1f1f1',
@@ -386,8 +408,6 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     backgroundColor: '#ff4d4d',
   },
-  actionPrimary: { backgroundColor: '#2e7bff' },
-  actionPrimaryText: { color: '#fff', fontWeight: '700' },
   actionSecondary: { backgroundColor: '#efefef' },
   actionSecondaryText: { color: '#333', fontWeight: '700' },
 });
