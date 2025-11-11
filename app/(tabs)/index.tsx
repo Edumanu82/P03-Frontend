@@ -42,6 +42,19 @@ const GoogleLogo = () => (
   </Svg>
 );
 
+const GitHubLogo = () => (
+  <Svg width="20" height="20" viewBox="0 0 24 24">
+    <Path
+      fill="#000"
+      d="M12 .5C5.648.5.5 5.648.5 12c0 5.088 3.293 9.407 7.865 10.942.574.106.783-.25.783-.554 0-.273-.01-1.186-.015-2.15-3.2.696-3.875-1.544-3.875-1.544-.523-1.33-1.277-1.684-1.277-1.684-1.044-.715.08-.701.08-.701 1.153.081 1.76 1.185 1.76 1.185 1.027 1.76 2.695 1.25 3.352.955.104-.743.403-1.25.733-1.537-2.555-.291-5.238-1.277-5.238-5.689 0-1.256.45-2.284 1.185-3.088-.118-.29-.515-1.455.113-3.035 0 0 .965-.309 3.16 1.18a10.957 10.957 0 012.875-.387c.976.005 1.957.131 2.874.387 2.192-1.489 3.155-1.18 3.155-1.18.63 1.58.233 2.745.115 3.035.738.804 1.184 1.832 1.184 3.088 0 4.423-2.689 5.395-5.252 5.679.414.357.783 1.065.783 2.146 0 1.55-.014 2.8-.014 3.18 0 .308.205.666.788.553C20.708 21.405 24 17.084 24 12c0-6.352-5.148-11.5-12-11.5z"
+    />
+  </Svg>
+);
+
+
+const GITHUB_CLIENT_ID_MOBILE = "Ov23li1MRx9sFT4AbPIn";
+const GITHUB_CLIENT_ID_WEB = "Ov23likDiCRzd54jcpWR";
+
 export default function LoginScreen() {
   const navigation = useNavigation<any>();
   const { width } = useWindowDimensions();
@@ -85,6 +98,26 @@ export default function LoginScreen() {
       console.log("User cancelled Google sign-in");
     }
   }, [response]);
+
+  useEffect(() => {
+    // Check if we're on web and just returned from GitHub OAuth
+    if (Platform.OS === 'web' && typeof window !== 'undefined') {
+      const urlParams = new URLSearchParams(window.location.search);
+      const code = urlParams.get('code');
+      const authPending = sessionStorage.getItem('github_auth_pending');
+
+      if (code && authPending) {
+        console.log('Web callback detected, exchanging code...');
+        sessionStorage.removeItem('github_auth_pending');
+
+        // Clear the URL parameters
+        window.history.replaceState({}, document.title, window.location.pathname);
+
+        // Exchange the code
+        exchangeCodeForToken(code);
+      }
+    }
+  }, []);
 
   async function handleSignInWithGoogle() {
     try {
@@ -158,6 +191,142 @@ export default function LoginScreen() {
       throw error;
     }
   };
+
+  async function loginWithGithub() {
+    try {
+      setLoading(true);
+
+      // Different configuration for web vs mobile
+      const isWeb = Platform.OS === 'web';
+      const githubClientId = isWeb ? GITHUB_CLIENT_ID_WEB : GITHUB_CLIENT_ID_MOBILE;
+      const githubRedirectUri = isWeb
+        ? window.location.origin
+        : 'com.example.p03frontend://';
+
+      console.log('=== GitHub OAuth Debug ===');
+      console.log('Platform:', Platform.OS);
+      console.log('Client ID:', githubClientId);
+      console.log('Redirect URI:', githubRedirectUri);
+
+      // GitHub OAuth configuration
+      const githubAuthUrl = `https://github.com/login/oauth/authorize?client_id=${githubClientId}&redirect_uri=${encodeURIComponent(githubRedirectUri)}&scope=user:email`;
+
+      console.log('Auth URL:', githubAuthUrl);
+
+      if (isWeb) {
+        handleWebGitHubAuth(githubAuthUrl, githubRedirectUri);
+      } else {
+        const result = await WebBrowser.openAuthSessionAsync(
+          githubAuthUrl,
+          githubRedirectUri
+        );
+
+        handleMobileGitHubCallback(result);
+      }
+    } catch (error) {
+      console.error("GitHub sign-in error:", error);
+      showAlert("Error", "Failed to sign in with GitHub");
+      setLoading(false);
+    }
+  }
+
+  function handleWebGitHubAuth(authUrl: string, redirectUri: string) {
+    sessionStorage.setItem('github_auth_pending', 'true');
+    window.location.href = authUrl;
+  }
+
+  async function handleMobileGitHubCallback(result: any) {
+    try {
+      console.log('GitHub OAuth Result:', result);
+      console.log('Result Type:', result.type);
+
+      if (result.type === 'success' && result.url) {
+        console.log('Success! Callback URL:', result.url);
+        const url = new URL(result.url);
+        const code = url.searchParams.get('code');
+        const error = url.searchParams.get('error');
+        const errorDescription = url.searchParams.get('error_description');
+
+        console.log('Authorization Code:', code);
+        console.log('Error from GitHub:', error);
+        console.log('Error Description:', errorDescription);
+
+        if (error) {
+          showAlert("GitHub Error", errorDescription || error);
+          return;
+        }
+
+        if (code) {
+          await exchangeCodeForToken(code);
+        } else {
+          console.error('No authorization code in URL');
+          showAlert("Error", "No authorization code received");
+        }
+      } else if (result.type === 'cancel') {
+        console.log("User cancelled GitHub sign-in");
+      }
+    } catch (error) {
+      console.error("GitHub sign-in error:", error);
+      showAlert("Error", "Failed to sign in with GitHub");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function exchangeCodeForToken(code: string) {
+    try {
+      console.log('=== Exchange Code for Token ===');
+      console.log('Code:', code);
+      console.log('Platform:', Platform.OS);
+      console.log('Sending code to backend...');
+
+      setLoading(true);
+      const encoded = btoa(`user:password`);
+      const backendResponse = await fetch('http://192.168.0.31:8080/api/auth/github', {
+        method: 'POST',
+        headers: {
+          "Authorization": `Basic ${encoded}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          code,
+          platform: Platform.OS === 'web' ? 'web' : 'mobile'
+        }),
+      });
+
+      console.log('Backend Response Status:', backendResponse.status);
+
+      const data = await backendResponse.json();
+      console.log('Backend Response Data:', data);
+
+      if (data.token) {
+        await AsyncStorage.setItem("token", data.token);
+        await AsyncStorage.setItem("username", JSON.stringify(data.user));
+        await AsyncStorage.setItem("userID", data.user.id.toString());
+
+        setUserInfo(data.user);
+
+        if (Platform.OS === 'web') {
+          router.push("/home");
+        } else {
+          await WebBrowser.dismissBrowser();
+          navigation.navigate("home");
+        }
+
+        setTimeout(() => {
+          showAlert("Success", `Welcome ${data.user.name}!`);
+        }, 1000);
+      } else {
+        console.error('No token in response:', data);
+        showAlert("Error", data.error || "Failed to authenticate with GitHub");
+      }
+    } catch (error) {
+      console.error("Token exchange error:", error);
+      showAlert("Error", "Failed to authenticate with GitHub");
+    } finally {
+      setLoading(false);
+    }
+  }
 
   const handleLogin = async () => {
     if (!email || !password) {
@@ -254,21 +423,38 @@ export default function LoginScreen() {
             </View>
 
             <TouchableOpacity
-              style={styles.googleButton}
+              style={styles.socialButton}
               onPress={() => promptAsync()}
               disabled={!request || loading}
               activeOpacity={0.8}
             >
-              <View style={styles.googleButtonContent}>
-                <View style={styles.googleIconContainer}>
+              <View style={styles.socialButtonContent}>
+                <View style={styles.socialIconContainer}>
                   <GoogleLogo />
                 </View>
-                <Text style={styles.googleButtonText}>
-                  {loading ? 'Signing in...' : 'Sign in with Google'}
+                <Text style={styles.socialButtonText}>
+                  {'Sign in with Google'}
                 </Text>
               </View>
             </TouchableOpacity>
-            
+
+            <TouchableOpacity
+              style={[styles.socialButton, { marginTop: 12 }]} // spacing
+              onPress={loginWithGithub}
+              disabled={loading}
+              activeOpacity={0.8}
+            >
+              <View style={styles.socialButtonContent}>
+                <View style={styles.socialIconContainer}>
+                  <GitHubLogo />
+                </View>
+                <Text style={styles.socialButtonText}>
+                  {'Sign in with GitHub'}
+                </Text>
+              </View>
+            </TouchableOpacity>
+
+
             {/* Register Placeholder */}
             <View style={styles.footer}>
               <Text style={styles.footerText}>Don't have an account?</Text>
@@ -360,7 +546,7 @@ const styles = StyleSheet.create({
     color: '#2e7bff',
     fontWeight: '600',
   },
-  googleButton: {
+  socialButton: {
     backgroundColor: '#fff',
     paddingVertical: 14,
     paddingHorizontal: 16,
@@ -374,24 +560,20 @@ const styles = StyleSheet.create({
     shadowRadius: 2,
     elevation: 2,
   },
-  googleButtonContent: {
+  socialButtonContent: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  googleIconContainer: {
+  socialIconContainer: {
     width: 20,
     height: 20,
     marginRight: 12,
   },
-  googleIcon: {
-    color: '#fff',
-    fontSize: 14,
-    fontWeight: 'bold',
-  },
-  googleButtonText: {
+  socialButtonText: {
     color: '#3c4043',
     fontWeight: '500',
     fontSize: 16,
   },
+  
 });
