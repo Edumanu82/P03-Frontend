@@ -282,7 +282,7 @@ export default function LoginScreen() {
 
       setLoading(true);
       const encoded = btoa(`user:password`);
-      const backendResponse = await fetch('http://192.168.0.31:8080/api/auth/github', {
+      const backendResponse = await fetch('https://hood-deals-3827cb9a0599.herokuapp.com/api/auth/github', {
         method: 'POST',
         headers: {
           "Authorization": `Basic ${encoded}`,
