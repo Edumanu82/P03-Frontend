@@ -23,7 +23,7 @@ const sampleMsgs = [
     { id: '2', from: 'Bob', message: 'Can you lower the price on the PS5?' },
     { id: '3', from: 'Charlie', message: 'I am interested in the IKEA desk.' },
     { id: '4', from: 'Abel', message: 'Yo I heard 67 was back and I wanted this to put on my boy Krishneet' },
-    { id: '5', from: 'Eduardo', message: 'Do you have any little boys I can buy, for the party?' },
+    { id: '5', from: 'Eduardo', message: 'Do you have any little bikes I can buy, for the party?' },
     { id: '6', from: 'Reggie', message: 'I am interested in the IKEA desk.' },
 ];
 
