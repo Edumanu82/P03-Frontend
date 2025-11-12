@@ -4,6 +4,20 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { FlatList, Image, StyleSheet, Text, TouchableOpacity, View, useWindowDimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+type Message = {
+    id: number;
+    from: number;
+    to: number;
+    listing?: number | null;
+    message: string;
+    is_read?: boolean | null;
+    created_at?: Date | null;
+    updated_at?: Date | null;
+    conversation_id?: number | null;
+};
+
+
+
 const sampleMsgs = [
     { id: '1', from: 'Alice', message: 'Is the bike still available?' },
     { id: '2', from: 'Bob', message: 'Can you lower the price on the PS5?' },
@@ -13,6 +27,7 @@ const sampleMsgs = [
     { id: '6', from: 'Reggie', message: 'I am interested in the IKEA desk.' },
 ];
 
+//change this to take conversation id from api data
 function onPressItem(item: { id: string; from: string; message: string }) {
     console.log('Pressed item:', item);
     router.push({
@@ -43,8 +58,50 @@ async function loadUserFromStorage(): Promise<StoredUser> {
 
 export default function InboxPage() {
     
+    const [messages, setMessages] = useState<Message[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+
     const { width } = useWindowDimensions();
     const [user, setUser] = useState<StoredUser>(null);
+
+    useFocusEffect(
+      React.useCallback(() => {
+        const fetchMessages = async () => {   
+          try {
+            setLoading(true);
+            
+            const username = "user";
+            const password = "password";
+            const base64Credentials = btoa(`${username}:${password}`);  
+
+            const response = await fetch(
+              "https://hood-deals-3827cb9a0599.herokuapp.com/conversations",
+              {
+                method: "GET",
+                headers: {
+                  Authorization: `Basic ${base64Credentials}`,
+                  "Content-Type": "application/json",
+                },
+              }
+            );
+
+            if (!response.ok) throw new Error(`HTTP error! ${response.status}`);
+            
+            const data = await response.json();
+            setMessages(data);
+          } catch (err) {
+            console.error("Error fetching messages:", err);
+            setError("Failed to load messages.");
+          } finally {
+            setLoading(false);
+          }
+        }
+        fetchMessages();
+      }, [])
+    );
+
+    console.log("Messages:", messages); // For debugging
 
     const refreshUser = useCallback(async () => {
         try {

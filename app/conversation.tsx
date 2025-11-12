@@ -1,5 +1,5 @@
 import { useLocalSearchParams } from "expo-router";
-import React from "react";
+import React, { useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -13,7 +13,20 @@ const sampleMsgs = [
     { id: '6', from: 'Reggie', message: 'I am interested in the IKEA desk.' },
 ];
 
+type conversation = {
+  id: number;
+  user1: number;
+  user2: number;
+  listing?: number | null;
+  last_message_at?: Date | null;
+  created_at?: Date | null;
+}
+
 export default function ConversationScreen() {
+    const[conversation, setConversation] = useState<conversation[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+    
     const params = useLocalSearchParams();
     const conversationId = params.conversationId;
     const message = sampleMsgs.find(msg => msg.id === conversationId);
