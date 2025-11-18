@@ -45,15 +45,27 @@ export default function HomeScreen() {
   const [selectedListing, setSelectedListing] = useState<Listing | null>(null);
   const [modalVisible, setModalVisible] = useState(false);
 
-  // ⭐ CATEGORY FILTER STATE
+  // CATEGORY FILTER
   const [selectedCategory, setSelectedCategory] = useState("All");
+
+  // PRICE FILTER
+  const [selectedPriceRange, setSelectedPriceRange] = useState("All");
 
   const navigation = useNavigation<HomeScreenNavigationProp>();
   const numColumns = 2;
   const isMultiColumn = numColumns > 1;
 
-  // ⭐ Categories list
+  // Category options
   const categories = ["All", "Cars", "Electronics", "Clothing", "Furniture"];
+
+  // Price options
+  const priceRanges = [
+    "All",
+    "Under $100",
+    "$100 - $500",
+    "$500 - $1000",
+    "Above $1000",
+  ];
 
   useFocusEffect(
     React.useCallback(() => {
@@ -110,21 +122,41 @@ export default function HomeScreen() {
     );
   }
 
-  // ⭐ FILTER LISTINGS BEFORE DISPLAY
-  const filteredListings =
-    selectedCategory === "All"
-      ? listings
-      : listings.filter(
-          (item) =>
-            item.category &&
-            item.category.toLowerCase() === selectedCategory.toLowerCase()
-        );
+  // ⭐ PRICE RANGE LOGIC
+  const applyPriceFilter = (item: Listing) => {
+    const p = item.price;
+
+    switch (selectedPriceRange) {
+      case "Under $100":
+        return p < 100;
+      case "$100 - $500":
+        return p >= 100 && p <= 500;
+      case "$500 - $1000":
+        return p >= 500 && p <= 1000;
+      case "Above $1000":
+        return p > 1000;
+      default:
+        return true; // "All"
+    }
+  };
+
+  // ⭐ COMBINED FILTER (Category + Price)
+  const filteredListings = listings.filter((item) => {
+    const matchesCategory =
+      selectedCategory === "All" ||
+      (item.category &&
+        item.category.toLowerCase() === selectedCategory.toLowerCase());
+
+    const matchesPrice = applyPriceFilter(item);
+
+    return matchesCategory && matchesPrice;
+  });
 
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.container}>
 
-        {/* ⭐ CATEGORY CHIPS */}
+        {/* ⭐ CATEGORY FILTER ROW */}
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
@@ -155,8 +187,40 @@ export default function HomeScreen() {
           ))}
         </ScrollView>
 
+        {/* ⭐ PRICE FILTER ROW */}
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={{ marginBottom: 10 }}
+        >
+          {priceRanges.map((range) => (
+            <TouchableOpacity
+              key={range}
+              onPress={() => setSelectedPriceRange(range)}
+              style={{
+                paddingVertical: 6,
+                paddingHorizontal: 14,
+                borderRadius: 20,
+                marginRight: 8,
+                backgroundColor:
+                  selectedPriceRange === range ? "#2e7bff" : "#e0e0e0",
+              }}
+            >
+              <Text
+                style={{
+                  color: selectedPriceRange === range ? "white" : "black",
+                  fontWeight: "600",
+                }}
+              >
+                {range}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+
+        {/* ⭐ LISTINGS GRID */}
         <FlatList
-          data={filteredListings} // ⭐ USE FILTERED LIST
+          data={filteredListings}
           keyExtractor={(item) => item.id.toString()}
           numColumns={numColumns}
           key={numColumns}
@@ -188,7 +252,7 @@ export default function HomeScreen() {
           )}
         />
 
-        {/* ⭐ LISTING DETAILS MODAL (unchanged) */}
+        {/* ⭐ LISTING DETAILS MODAL (same as before) */}
         <Modal
           visible={modalVisible}
           animationType="slide"
