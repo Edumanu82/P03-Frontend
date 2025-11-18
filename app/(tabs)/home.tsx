@@ -45,20 +45,18 @@ export default function HomeScreen() {
   const [selectedListing, setSelectedListing] = useState<Listing | null>(null);
   const [modalVisible, setModalVisible] = useState(false);
 
-  // CATEGORY FILTER
+  // ⭐ CATEGORY FILTER
   const [selectedCategory, setSelectedCategory] = useState("All");
 
-  // PRICE FILTER
+  // ⭐ PRICE FILTER
   const [selectedPriceRange, setSelectedPriceRange] = useState("All");
 
   const navigation = useNavigation<HomeScreenNavigationProp>();
   const numColumns = 2;
   const isMultiColumn = numColumns > 1;
 
-  // Category options
   const categories = ["All", "Cars", "Electronics", "Clothing", "Furniture"];
 
-  // Price options
   const priceRanges = [
     "All",
     "Under $100",
@@ -122,7 +120,7 @@ export default function HomeScreen() {
     );
   }
 
-  // ⭐ PRICE RANGE LOGIC
+  // ⭐ PRICE FILTER LOGIC
   const applyPriceFilter = (item: Listing) => {
     const p = item.price;
 
@@ -136,11 +134,11 @@ export default function HomeScreen() {
       case "Above $1000":
         return p > 1000;
       default:
-        return true; // "All"
+        return true;
     }
   };
 
-  // ⭐ COMBINED FILTER (Category + Price)
+  // ⭐ Combined filter (Category + Price)
   const filteredListings = listings.filter((item) => {
     const matchesCategory =
       selectedCategory === "All" ||
@@ -156,68 +154,6 @@ export default function HomeScreen() {
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.container}>
 
-        {/* ⭐ CATEGORY FILTER ROW */}
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          style={{ marginBottom: 10 }}
-        >
-          {categories.map((cat) => (
-            <TouchableOpacity
-              key={cat}
-              onPress={() => setSelectedCategory(cat)}
-              style={{
-                paddingVertical: 6,
-                paddingHorizontal: 14,
-                borderRadius: 20,
-                marginRight: 8,
-                backgroundColor:
-                  selectedCategory === cat ? "#2e7bff" : "#e0e0e0",
-              }}
-            >
-              <Text
-                style={{
-                  color: selectedCategory === cat ? "white" : "black",
-                  fontWeight: "600",
-                }}
-              >
-                {cat}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
-
-        {/* ⭐ PRICE FILTER ROW */}
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          style={{ marginBottom: 10 }}
-        >
-          {priceRanges.map((range) => (
-            <TouchableOpacity
-              key={range}
-              onPress={() => setSelectedPriceRange(range)}
-              style={{
-                paddingVertical: 6,
-                paddingHorizontal: 14,
-                borderRadius: 20,
-                marginRight: 8,
-                backgroundColor:
-                  selectedPriceRange === range ? "#2e7bff" : "#e0e0e0",
-              }}
-            >
-              <Text
-                style={{
-                  color: selectedPriceRange === range ? "white" : "black",
-                  fontWeight: "600",
-                }}
-              >
-                {range}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
-
         {/* ⭐ LISTINGS GRID */}
         <FlatList
           data={filteredListings}
@@ -226,7 +162,86 @@ export default function HomeScreen() {
           key={numColumns}
           columnWrapperStyle={isMultiColumn ? styles.row : undefined}
           contentContainerStyle={styles.listContent}
-          ListHeaderComponent={<Text style={styles.appTitle}>HoodDeals</Text>}
+ListHeaderComponent={
+  <View style={{ paddingBottom: 10 }}>
+    <Text style={styles.appTitle}>HoodDeals</Text>
+
+    {/* ⭐ Filters under the title now */}
+    <View
+      style={{
+        paddingHorizontal: 10,
+        paddingTop: 5,
+        paddingBottom: 5,
+        backgroundColor: "white",
+        marginTop: 6,
+      }}
+    >
+      {/* CATEGORY FILTER */}
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        style={{ marginBottom: 8 }}
+      >
+        {categories.map((cat) => (
+          <TouchableOpacity
+            key={cat}
+            onPress={() => setSelectedCategory(cat)}
+            style={{
+              paddingVertical: 12,
+              paddingHorizontal: 24,
+              borderRadius: 50,
+              marginRight: 8,
+              backgroundColor:
+                selectedCategory === cat ? "#2e7bff" : "#f2f2f2",
+            }}
+          >
+            <Text
+              style={{
+                color: selectedCategory === cat ? "white" : "#333",
+                fontWeight: "600",
+                fontSize: 14,
+              }}
+            >
+              {cat}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </ScrollView>
+
+      {/* PRICE FILTER */}
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        style={{ marginBottom: 6 }}
+      >
+        {priceRanges.map((range) => (
+          <TouchableOpacity
+            key={range}
+            onPress={() => setSelectedPriceRange(range)}
+            style={{
+              paddingVertical: 12,
+              paddingHorizontal: 24,
+              borderRadius: 50,
+              marginRight: 8,
+              backgroundColor:
+                selectedPriceRange === range ? "#2e7bff" : "#f2f2f2",
+            }}
+          >
+            <Text
+              style={{
+                color: selectedPriceRange === range ? "white" : "#333",
+                fontWeight: "600",
+                fontSize: 14,
+              }}
+            >
+              {range}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </ScrollView>
+    </View>
+  </View>
+}
           renderItem={({ item }) => (
             <TouchableOpacity
               style={[styles.card, { width: isMultiColumn ? "48%" : "100%" }]}
@@ -252,7 +267,7 @@ export default function HomeScreen() {
           )}
         />
 
-        {/* ⭐ LISTING DETAILS MODAL (same as before) */}
+        {/* ⭐ LISTING DETAILS MODAL (unchanged) */}
         <Modal
           visible={modalVisible}
           animationType="slide"
