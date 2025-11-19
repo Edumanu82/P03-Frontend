@@ -53,7 +53,7 @@ export default function HomeScreen() {
   const numColumns = 2;
   const isMultiColumn = numColumns > 1;
 
-  const categories = ["All", "Cars", "Electronics", "Clothing", "Furniture"];
+  const categories = ["All", "Cars", "Electronics", "Clothing", "Furniture", "Food"];
   const priceRanges = [
     "All",
     "Under $100",

@@ -53,7 +53,7 @@ appTitle: {
   },
 
   title: {
-    fontSize: 20,
+    fontSize: 24,
     fontWeight: "600",
     color: "#000",
   },
@@ -67,6 +67,7 @@ appTitle: {
 
   category: {
     fontSize: 20,
+    fontWeight: "bold",
     color: "#000",
     marginTop: 4,
   },
