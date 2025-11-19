@@ -303,7 +303,7 @@ const styles = StyleSheet.create({
   profileCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.85)',   // ⭐ Slight transparency
+    backgroundColor: 'rgba(255,255,255,0.90)',   
     padding: 20,
     borderRadius: 12,
     marginTop: 20,
@@ -315,7 +315,7 @@ const styles = StyleSheet.create({
   section: { flex: 1 },
   sectionTitle: { fontSize: 24, fontWeight: '600', marginBottom: 12, color: '#fff' },
   listingCard: {
-    backgroundColor: 'rgba(255,255,255,0.85)',
+    backgroundColor: 'rgba(255,255,255,0.90)',
     padding: 14,
     borderRadius: 10,
     marginBottom: 10,

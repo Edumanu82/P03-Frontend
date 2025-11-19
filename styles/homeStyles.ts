@@ -33,7 +33,7 @@ appTitle: {
   },
 
   card: {
-    backgroundColor: "rgba(255,255,255,0.70)",
+    backgroundColor: "rgba(255,255,255,0.90)",
     borderRadius: 12,
     padding: 10,
     shadowColor: "#000",
