@@ -1,5 +1,4 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import * as FileSystem from "expo-file-system";
 import * as ImagePicker from "expo-image-picker";
 import { router } from "expo-router";
 import React, { useState } from "react";
@@ -94,31 +93,32 @@ export default function PostItemScreen() {
   const uploadImageNative = async (uri: string) => {
     try {
       setLoading(true);
-      const base64 = await FileSystem.readAsStringAsync(uri, { encoding: "base64" });
-      const fileExt = uri.split(".").pop() || "jpg";
+
+      const fileExt = uri.split('.').pop() || 'jpg';
       const fileName = `${Date.now()}.${fileExt}`;
 
+      const response = await fetch(uri);          // Fetch the file
+      const arrayBuffer = await response.arrayBuffer(); // Convert to array buffer
+
       const { data, error } = await supabase.storage
-        .from("images")
-        .upload(fileName, Buffer.from(base64, "base64"), {
-          contentType: "image/jpeg",
+        .from('images')
+        .upload(fileName, arrayBuffer, {
+          contentType: `image/${fileExt}`,
           upsert: false,
         });
 
       if (error) throw error;
 
-      const { data: publicData } = supabase.storage
-        .from("images")
-        .getPublicUrl(fileName);
-
+      const { data: publicData } = supabase.storage.from('images').getPublicUrl(fileName);
       setImageUrl(publicData.publicUrl);
-      showAlert("Success", "Image uploaded!");
+      showAlert('Success', 'Image uploaded!');
     } catch (err: any) {
-      showAlert("Upload Error", err.message);
+      showAlert('Upload Error', err.message);
     } finally {
       setLoading(false);
     }
   };
+
 
   const handlePost = async () => {
     if (!title.trim()) return showAlert("Error", "Please enter a title.");
