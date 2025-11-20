@@ -6,13 +6,15 @@ import {
   Alert,
   FlatList,
   Image,
+  ImageBackground,
+
   Modal,
   Pressable,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
-  useWindowDimensions,
+  useWindowDimensions
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -65,7 +67,6 @@ function ItemDetailModal({
 
   if (!item) return null;
 
-  // ✅ Delete listing handler
   const handleDelete = async () => {
     Alert.alert(
       'Confirm Delete',
@@ -81,9 +82,8 @@ function ItemDetailModal({
               const password = 'password';
               const authHeader = 'Basic ' + btoa(`${username}:${password}`);
 
-                const response = await fetch(
-                  `https://hood-deals-3827cb9a0599.herokuapp.com/api/listings/${item.id}`,
-
+              const response = await fetch(
+                `https://hood-deals-3827cb9a0599.herokuapp.com/api/listings/${item.id}`,
                 {
                   method: 'DELETE',
                   headers: {
@@ -94,16 +94,13 @@ function ItemDetailModal({
               );
 
               if (!response.ok) {
-                console.error('Failed to delete listing:', response.status);
                 Alert.alert('Error', `Failed to delete listing: ${response.status}`);
                 return;
               }
 
-              console.log('Listing deleted successfully');
               onClose();
-              refreshListings(); // ✅ Refresh list after delete
+              refreshListings();
             } catch (err) {
-              console.error('Error deleting listing:', err);
               Alert.alert('Error', 'An error occurred while deleting the listing.');
             }
           },
@@ -158,13 +155,11 @@ export default function ProfileScreen() {
     try {
       const u = await loadUserFromStorage();
       setUser(u);
-    } catch (e) {
-      console.error('Error loading user info:', e);
+    } catch {
       setUser(null);
     }
   }, []);
 
-  // ✅ Define fetchListings here so it’s accessible everywhere
   const fetchListings = async () => {
     try {
       if (!user?.name && !user?.email) return;
@@ -183,16 +178,8 @@ export default function ProfileScreen() {
         }
       );
 
-      if (!response.ok) {
-        console.error('Server error:', response.status);
-        return;
-      }
-
       const text = await response.text();
-      if (!text) {
-        console.warn('Empty response from server');
-        return;
-      }
+      if (!text) return;
 
       const data = JSON.parse(text);
 
@@ -210,9 +197,7 @@ export default function ProfileScreen() {
       }));
 
       setUserItems(mapped);
-    } catch (err) {
-      console.error('Error fetching listings:', err);
-    }
+    } catch {}
   };
 
   useEffect(() => {
@@ -230,104 +215,107 @@ export default function ProfileScreen() {
   }, [user]);
 
   const handleLogout = async () => {
-    try {
-      await AsyncStorage.clear();
-      setUser(null);
-      router.replace('/');
-    } catch (error) {
-      console.error('Logout failed:', error);
-    }
+    await AsyncStorage.clear();
+    setUser(null);
+    router.replace('/');
   };
 
   const onPressItem = (item: Item) => setSelectedItem(item);
   const closeModal = () => setSelectedItem(null);
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <View style={[styles.contentContainer, { width: containerWidth }]}>
-        <View style={styles.profileCard}>
-          <Image
-            source={
-              user?.picture
-                ? { uri: `${user.picture}?t=${Date.now()}` }
-                : require('../../assets/images/profilepic.png')
-            }
-            style={styles.avatar}
-          />
-          <View>
-            <Text style={styles.name}>{user?.name || 'Guest User'}</Text>
-            <Text style={styles.email}>{user?.email || 'No email available'}</Text>
-          </View>
-        </View>
-
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>My Listings</Text>
-          {userItems.length > 0 ? (
-            <FlatList
-              data={userItems}
-              keyExtractor={(item) => item.id}
-              contentContainerStyle={{ paddingBottom: 8 }}
-              renderItem={({ item }) => (
-                <TouchableOpacity style={styles.listingCard} onPress={() => onPressItem(item)}>
-                  <View>
-                    <Text style={styles.itemTitle}>{item.title}</Text>
-                    {!!item.description && (
-                      <Text numberOfLines={1} style={styles.itemSubtitle}>
-                        {item.description}
-                      </Text>
-                    )}
-                  </View>
-                  <Text style={styles.itemPrice}>{item.price}</Text>
-                </TouchableOpacity>
-              )}
+    <ImageBackground
+      source={require('../../assets/images/HOODDEALSLOGO4.webp')}
+      style={{ flex: 1, width: '100%', height: '100%' }}
+      resizeMode="stretch"
+    >
+      <SafeAreaView style={styles.safeArea}>
+        <View style={[styles.contentContainer, { width: containerWidth }]}>
+          <View style={styles.profileCard}>
+            <Image
+              source={
+                user?.picture
+                  ? { uri: `${user.picture}?t=${Date.now()}` }
+                  : require('../../assets/images/profilepic.png')
+              }
+              style={styles.avatar}
             />
-          ) : (
-            <Text style={{ textAlign: 'center', color: '#777', marginTop: 10 }}>No listings yet.</Text>
-          )}
+            <View>
+              <Text style={styles.name}>{user?.name || 'Guest User'}</Text>
+              <Text style={styles.email}>{user?.email || 'No email available'}</Text>
+            </View>
+          </View>
+
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>My Listings</Text>
+            {userItems.length > 0 ? (
+              <FlatList
+                data={userItems}
+                keyExtractor={(item) => item.id}
+                contentContainerStyle={{ paddingBottom: 8 }}
+                renderItem={({ item }) => (
+                  <TouchableOpacity style={styles.listingCard} onPress={() => onPressItem(item)}>
+                    <View>
+                      <Text style={styles.itemTitle}>{item.title}</Text>
+                      {!!item.description && (
+                        <Text numberOfLines={1} style={styles.itemSubtitle}>
+                          {item.description}
+                        </Text>
+                      )}
+                    </View>
+                    <Text style={styles.itemPrice}>{item.price}</Text>
+                  </TouchableOpacity>
+                )}
+              />
+            ) : (
+              <Text style={{ textAlign: 'center', color: '#ddd', marginTop: 10 }}>No listings yet.</Text>
+            )}
+          </View>
+
+          <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
+            <Text style={styles.logoutButtonText}>Log Out</Text>
+          </TouchableOpacity>
         </View>
 
-        <TouchableOpacity style={styles.editButton}>
-          <Text style={styles.editButtonText}>Edit Profile</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-          <Text style={styles.logoutButtonText}>Log Out</Text>
-        </TouchableOpacity>
-      </View>
-
-      <ItemDetailModal
-        item={selectedItem}
-        visible={!!selectedItem}
-        onClose={closeModal}
-        refreshListings={fetchListings}
-      />
-    </SafeAreaView>
+        <ItemDetailModal
+          item={selectedItem}
+          visible={!!selectedItem}
+          onClose={closeModal}
+          refreshListings={fetchListings}
+        />
+      </SafeAreaView>
+    </ImageBackground>
   );
 }
 
 const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: '#f5f5f5', alignItems: 'center' },
-  contentContainer: { flex: 1, width: '100%', maxWidth: 700, paddingHorizontal: 20 },
+  safeArea: {
+    flex: 1,
+    alignItems: 'center',
+    backgroundColor: 'rgba(0,0,0,0.35)', // ⭐ DARK OVERLAY
+  },
+  contentContainer: {
+    flex: 1,
+    width: '100%',
+    maxWidth: 700,
+    paddingHorizontal: 20,
+  },
   profileCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#fff',
+    backgroundColor: 'rgba(255,255,255,0.90)',   
     padding: 20,
     borderRadius: 12,
     marginTop: 20,
     marginBottom: 25,
-    shadowColor: '#000',
-    shadowOpacity: 0.1,
-    shadowRadius: 5,
-    elevation: 3,
   },
   avatar: { width: 70, height: 70, borderRadius: 35, marginRight: 15 },
-  name: { fontSize: 22, fontWeight: 'bold', color: '#111' },
-  email: { fontSize: 15, color: '#555' },
+  name: { fontSize: 22, fontWeight: 'bold', color: 'black' },
+  email: { fontSize: 15, color: 'black' },
   section: { flex: 1 },
-  sectionTitle: { fontSize: 18, fontWeight: '600', marginBottom: 12, color: '#333' },
+  sectionTitle: { fontSize: 24, fontWeight: '600', marginBottom: 12, color: '#fff' },
   listingCard: {
-    backgroundColor: '#fff',
+    backgroundColor: 'rgba(255,255,255,0.90)',
     padding: 14,
     borderRadius: 10,
     marginBottom: 10,
@@ -335,14 +323,10 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     gap: 12,
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOpacity: 0.05,
-    shadowRadius: 3,
-    elevation: 2,
   },
-  itemTitle: { fontSize: 16, color: '#222', fontWeight: '600' },
-  itemSubtitle: { fontSize: 13, color: '#666', marginTop: 2, maxWidth: 220 },
-  itemPrice: { fontWeight: 'bold', color: '#008000' },
+  itemTitle: { fontSize: 20, color: '#000', fontWeight: '600' },
+  itemSubtitle: { fontSize: 16, color: '#444', marginTop: 2, maxWidth: 220 },
+  itemPrice: { fontSize: 16, fontWeight: 'bold', color: '#008000' },
   editButton: {
     backgroundColor: '#2e7bff',
     paddingVertical: 14,
@@ -372,10 +356,6 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     padding: 16,
     gap: 12,
-    shadowColor: '#000',
-    shadowOpacity: 0.2,
-    shadowRadius: 12,
-    elevation: 8,
   },
   modalImage: {
     width: '100%',

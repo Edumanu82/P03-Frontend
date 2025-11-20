@@ -3,6 +3,12 @@ import { router } from 'expo-router';
 import React, { useState } from 'react';
 import {
   Alert,
+  ImageBackground // ⭐ ADDED
+  ,
+
+
+
+
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -33,14 +39,12 @@ export default function PostItemScreen() {
   const [imageUrl, setImageUrl] = useState('');
   const [category, setCategory] = useState('');
   const [location, setLocation] = useState('');
-  const [user_id, setUserId] = useState('');
   const [loading, setLoading] = useState(false);
 
   const isLargeScreen = width > 768;
   const containerWidth = isLargeScreen ? Math.min(600, width * 0.9) : '100%';
 
   const handlePost = async () => {
-    // Validation
     if (!title.trim()) {
       showAlert("Error", "Please enter an item title");
       return;
@@ -61,9 +65,6 @@ export default function PostItemScreen() {
       setLoading(true);
       const token = await AsyncStorage.getItem("token");
 
-      console.log("=== Posting Listing ===");
-      console.log("Token exists:", !!token);
-
       if (!token) {
         showAlert("Error", "You must be logged in to post items");
         router.push('/');
@@ -80,7 +81,6 @@ export default function PostItemScreen() {
         user_id: await AsyncStorage.getItem("userID"),
       };
 
-      console.log("Sending request body:", JSON.stringify(requestBody, null, 2));
       const encoded = btoa(`user:password`);
       const response = await fetch('https://hood-deals-3827cb9a0599.herokuapp.com/api/listings', {
         method: 'POST',
@@ -91,20 +91,15 @@ export default function PostItemScreen() {
         body: JSON.stringify(requestBody),
       });
 
-      console.log("Response status:", response.status);
-      
       const data = await response.json();
-      console.log("Response data:", data);
 
       if (!response.ok) {
         showAlert("Error", data.error || data.message || "Failed to create listing");
         return;
       }
 
-      // Success!
       showAlert("Success", "Your item has been listed!");
-      
-      // Clear the form
+
       setTitle('');
       setPrice('');
       setDescription('');
@@ -112,7 +107,6 @@ export default function PostItemScreen() {
       setCategory('');
       setLocation('');
 
-      // Navigate back to home
       setTimeout(() => {
         router.push('/home');
       }, 1000);
@@ -125,105 +119,115 @@ export default function PostItemScreen() {
     }
   };
 
+  // ⭐ FULL BACKGROUND WRAP (just like Login & Home)
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        style={styles.container}
-      >
-        <ScrollView contentContainerStyle={styles.scroll}>
-          <View style={[styles.formContainer, { width: containerWidth }]}>
-            <Text style={styles.header}>List a New Item</Text>
+    <ImageBackground
+      source={require("../../assets/images/HOODDEALSLOGO4.webp")}
+      style={{ flex: 1, width: "100%", height: "100%" }}
+      resizeMode="stretch"
+    >
+      <SafeAreaView style={styles.safeArea}>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          style={styles.container}
+        >
+          <ScrollView contentContainerStyle={styles.scroll}>
+            <View style={[styles.formContainer, { width: containerWidth }]}>
+              
+              <Text style={styles.header}>List a New Item</Text>
 
-            <Text style={styles.label}>Title *</Text>
-            <TextInput
-              placeholder="What are you selling?"
-              placeholderTextColor="#888"
-              style={styles.input}
-              value={title}
-              onChangeText={setTitle}
-            />
-
-            <Text style={styles.label}>Price *</Text>
-            <View style={styles.priceContainer}>
-              <Text style={styles.dollarSign}>$</Text>
+              <Text style={styles.label}>Title *</Text>
               <TextInput
-                placeholder="0.00"
+                placeholder="What are you selling?"
                 placeholderTextColor="#888"
-                style={[styles.input, styles.priceInput]}
-                keyboardType="decimal-pad"
-                value={price}
-                onChangeText={setPrice}
+                style={styles.input}
+                value={title}
+                onChangeText={setTitle}
               />
+
+              <Text style={styles.label}>Price *</Text>
+              <View style={styles.priceContainer}>
+                <Text style={styles.dollarSign}>$</Text>
+                <TextInput
+                  placeholder="0.00"
+                  placeholderTextColor="#888"
+                  style={[styles.input, styles.priceInput]}
+                  keyboardType="decimal-pad"
+                  value={price}
+                  onChangeText={setPrice}
+                />
+              </View>
+
+              <Text style={styles.label}>Description</Text>
+              <TextInput
+                placeholder="Describe your item in detail..."
+                placeholderTextColor="#888"
+                multiline
+                style={[styles.input, styles.textArea]}
+                value={description}
+                onChangeText={setDescription}
+              />
+
+              <Text style={styles.label}>Image URL</Text>
+              <TextInput
+                placeholder="https://example.com/image.jpg"
+                placeholderTextColor="#888"
+                style={styles.input}
+                value={imageUrl}
+                onChangeText={setImageUrl}
+                autoCapitalize="none"
+                keyboardType="url"
+              />
+
+              <Text style={styles.label}>Category</Text>
+              <TextInput
+                placeholder="e.g., Electronics, Furniture, Clothing"
+                placeholderTextColor="#888"
+                style={styles.input}
+                value={category}
+                onChangeText={setCategory}
+              />
+
+              <Text style={styles.label}>Location</Text>
+              <TextInput
+                placeholder="Where is this item located?"
+                placeholderTextColor="#888"
+                style={styles.input}
+                value={location}
+                onChangeText={setLocation}
+              />
+
+              <TouchableOpacity 
+                style={[styles.button, loading && styles.buttonDisabled]} 
+                onPress={handlePost}
+                disabled={loading}
+              >
+                <Text style={styles.buttonText}>
+                  {loading ? 'Posting...' : 'Post Item'}
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity 
+                style={styles.cancelButton} 
+                onPress={() => router.back()}
+                disabled={loading}
+              >
+                <Text style={styles.cancelButtonText}>Cancel</Text>
+              </TouchableOpacity>
+
             </View>
-
-            <Text style={styles.label}>Description</Text>
-            <TextInput
-              placeholder="Describe your item in detail..."
-              placeholderTextColor="#888"
-              multiline
-              style={[styles.input, styles.textArea]}
-              value={description}
-              onChangeText={setDescription}
-            />
-
-            <Text style={styles.label}>Image URL</Text>
-            <TextInput
-              placeholder="https://example.com/image.jpg"
-              placeholderTextColor="#888"
-              style={styles.input}
-              value={imageUrl}
-              onChangeText={setImageUrl}
-              autoCapitalize="none"
-              keyboardType="url"
-            />
-
-            <Text style={styles.label}>Category</Text>
-            <TextInput
-              placeholder="e.g., Electronics, Furniture, Clothing"
-              placeholderTextColor="#888"
-              style={styles.input}
-              value={category}
-              onChangeText={setCategory}
-            />
-
-            <Text style={styles.label}>Location</Text>
-            <TextInput
-              placeholder="Where is this item located?"
-              placeholderTextColor="#888"
-              style={styles.input}
-              value={location}
-              onChangeText={setLocation}
-            />
-
-            <TouchableOpacity 
-              style={[styles.button, loading && styles.buttonDisabled]} 
-              onPress={handlePost}
-              disabled={loading}
-            >
-              <Text style={styles.buttonText}>
-                {loading ? 'Posting...' : 'Post Item'}
-              </Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity 
-              style={styles.cancelButton} 
-              onPress={() => router.back()}
-              disabled={loading}
-            >
-              <Text style={styles.cancelButtonText}>Cancel</Text>
-            </TouchableOpacity>
-          </View>
-        </ScrollView>
-      </KeyboardAvoidingView>
-    </SafeAreaView>
+          </ScrollView>
+        </KeyboardAvoidingView>
+      </SafeAreaView>
+    </ImageBackground>
   );
 }
 
+// ⭐ OVERLAY ADDED (same as Login)
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: "rgba(0,0,0,0.35)",   // ⭐ TRANSPARENT DARK OVERLAY
   },
   container: {
     flex: 1,
@@ -239,16 +243,16 @@ const styles = StyleSheet.create({
     maxWidth: 600,
   },
   header: {
-    fontSize: 28,
+    fontSize: 35,
     fontWeight: 'bold',
     marginBottom: 30,
     textAlign: 'center',
-    color: '#111',
+    color: 'white',
   },
   label: {
-    fontSize: 16,
+    fontSize: 20,
     fontWeight: '600',
-    color: '#111',
+    color: 'white',
     marginBottom: 8,
     marginTop: 5,
   },
@@ -267,9 +271,9 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   dollarSign: {
-    fontSize: 20,
+    fontSize: 25,
     fontWeight: 'bold',
-    color: '#111',
+    color: 'white',
     marginRight: 8,
   },
   priceInput: {
