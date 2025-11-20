@@ -2,14 +2,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { router } from 'expo-router';
 import React, { useState } from 'react';
 import {
-  Alert,
-  ImageBackground // ⭐ ADDED
-  ,
-
-
-
-
-  KeyboardAvoidingView,
+  Alert, Image, KeyboardAvoidingView,
   Platform,
   ScrollView,
   StyleSheet,
@@ -43,6 +36,8 @@ export default function PostItemScreen() {
 
   const isLargeScreen = width > 768;
   const containerWidth = isLargeScreen ? Math.min(600, width * 0.9) : '100%';
+
+  const categoryOptions = ['Cars', 'Electronics', 'Clothing', 'Furniture', 'Food', 'Other'];
 
   const handlePost = async () => {
     if (!title.trim()) {
@@ -119,115 +114,173 @@ export default function PostItemScreen() {
     }
   };
 
-  // ⭐ FULL BACKGROUND WRAP (just like Login & Home)
   return (
-    <ImageBackground
-      source={require("../../assets/images/HOODDEALSLOGO4.webp")}
-      style={{ flex: 1, width: "100%", height: "100%" }}
-      resizeMode="stretch"
-    >
-      <SafeAreaView style={styles.safeArea}>
-        <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-          style={styles.container}
+    <SafeAreaView style={styles.safeArea}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        style={styles.container}
+      >
+        <ScrollView
+          contentContainerStyle={styles.scroll}
+          showsVerticalScrollIndicator={false}
         >
-          <ScrollView contentContainerStyle={styles.scroll}>
-            <View style={[styles.formContainer, { width: containerWidth }]}>
-              
-              <Text style={styles.header}>List a New Item</Text>
+          <View style={[styles.formContainer, { width: containerWidth }]}>
 
-              <Text style={styles.label}>Title *</Text>
-              <TextInput
-                placeholder="What are you selling?"
-                placeholderTextColor="#888"
-                style={styles.input}
-                value={title}
-                onChangeText={setTitle}
+            {/* Header */}
+            <View style={styles.header}>
+              <Image
+                source={require('../../assets/images/HOODDEALSLOGO3.webp')}
+                style={styles.logoImage}
               />
+              <Text style={styles.headerTitle}>List a New Item</Text>
+              <Text style={styles.headerSubtitle}>Share what you're selling with your neighborhood</Text>
+            </View>
 
-              <Text style={styles.label}>Price *</Text>
-              <View style={styles.priceContainer}>
-                <Text style={styles.dollarSign}>$</Text>
+            {/* Form Card */}
+            <View style={styles.formCard}>
+
+              {/* Title Input */}
+              <View style={styles.inputContainer}>
+                <Text style={styles.label}>Title <Text style={styles.required}>*</Text></Text>
                 <TextInput
-                  placeholder="0.00"
-                  placeholderTextColor="#888"
-                  style={[styles.input, styles.priceInput]}
-                  keyboardType="decimal-pad"
-                  value={price}
-                  onChangeText={setPrice}
+                  placeholder="What are you selling?"
+                  placeholderTextColor="#999"
+                  style={styles.input}
+                  value={title}
+                  onChangeText={setTitle}
                 />
               </View>
 
-              <Text style={styles.label}>Description</Text>
-              <TextInput
-                placeholder="Describe your item in detail..."
-                placeholderTextColor="#888"
-                multiline
-                style={[styles.input, styles.textArea]}
-                value={description}
-                onChangeText={setDescription}
-              />
+              {/* Price Input */}
+              <View style={styles.inputContainer}>
+                <Text style={styles.label}>Price <Text style={styles.required}>*</Text></Text>
+                <View style={styles.priceInputContainer}>
+                  <Text style={styles.dollarSign}>$</Text>
+                  <TextInput
+                    placeholder="0.00"
+                    placeholderTextColor="#999"
+                    style={styles.priceInput}
+                    keyboardType="decimal-pad"
+                    value={price}
+                    onChangeText={setPrice}
+                  />
+                </View>
+              </View>
 
-              <Text style={styles.label}>Image URL</Text>
-              <TextInput
-                placeholder="https://example.com/image.jpg"
-                placeholderTextColor="#888"
-                style={styles.input}
-                value={imageUrl}
-                onChangeText={setImageUrl}
-                autoCapitalize="none"
-                keyboardType="url"
-              />
+              {/* Category Selection */}
+              <View style={styles.inputContainer}>
+                <Text style={styles.label}>Category</Text>
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  style={styles.categoryScroll}
+                >
+                  {categoryOptions.map((cat) => (
+                    <TouchableOpacity
+                      key={cat}
+                      onPress={() => setCategory(cat)}
+                      style={[
+                        styles.categoryChip,
+                        category === cat && styles.categoryChipActive,
+                      ]}
+                      activeOpacity={0.7}
+                    >
+                      <Text
+                        style={[
+                          styles.categoryChipText,
+                          category === cat && styles.categoryChipTextActive,
+                        ]}
+                      >
+                        {cat}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
+              </View>
 
-              <Text style={styles.label}>Category</Text>
-              <TextInput
-                placeholder="e.g., Electronics, Furniture, Clothing"
-                placeholderTextColor="#888"
-                style={styles.input}
-                value={category}
-                onChangeText={setCategory}
-              />
+              {/* Description Input */}
+              <View style={styles.inputContainer}>
+                <Text style={styles.label}>Description</Text>
+                <TextInput
+                  placeholder="Describe your item in detail..."
+                  placeholderTextColor="#999"
+                  multiline
+                  style={[styles.input, styles.textArea]}
+                  value={description}
+                  onChangeText={setDescription}
+                />
+                <Text style={styles.helperText}>
+                  Include details like condition, size, features, etc.
+                </Text>
+              </View>
 
-              <Text style={styles.label}>Location</Text>
-              <TextInput
-                placeholder="Where is this item located?"
-                placeholderTextColor="#888"
-                style={styles.input}
-                value={location}
-                onChangeText={setLocation}
-              />
+              {/* Image URL Input */}
+              <View style={styles.inputContainer}>
+                <Text style={styles.label}>Image URL</Text>
+                <TextInput
+                  placeholder="https://example.com/image.jpg"
+                  placeholderTextColor="#999"
+                  style={styles.input}
+                  value={imageUrl}
+                  onChangeText={setImageUrl}
+                  autoCapitalize="none"
+                  keyboardType="url"
+                />
+                <Text style={styles.helperText}>
+                  Add a link to a photo of your item
+                </Text>
+              </View>
 
-              <TouchableOpacity 
-                style={[styles.button, loading && styles.buttonDisabled]} 
+              {/* Location Input */}
+              <View style={styles.inputContainer}>
+                <Text style={styles.label}>Location</Text>
+                <TextInput
+                  placeholder="Where is this item located?"
+                  placeholderTextColor="#999"
+                  style={styles.input}
+                  value={location}
+                  onChangeText={setLocation}
+                />
+                <Text style={styles.helperText}>
+                  Help buyers know where to pick up
+                </Text>
+              </View>
+
+              {/* Post Button */}
+              <TouchableOpacity
+                style={[styles.postButton, loading && styles.buttonDisabled]}
                 onPress={handlePost}
                 disabled={loading}
+                activeOpacity={0.8}
               >
-                <Text style={styles.buttonText}>
+                <Text style={styles.postButtonText}>
                   {loading ? 'Posting...' : 'Post Item'}
                 </Text>
               </TouchableOpacity>
 
-              <TouchableOpacity 
-                style={styles.cancelButton} 
-                onPress={() => router.back()}
+              {/* Cancel Button */}
+              <TouchableOpacity
+                style={styles.cancelButton}
+                onPress={() => router.navigate('/(tabs)/home')}
                 disabled={loading}
+                activeOpacity={0.8}
               >
                 <Text style={styles.cancelButtonText}>Cancel</Text>
               </TouchableOpacity>
 
             </View>
-          </ScrollView>
-        </KeyboardAvoidingView>
-      </SafeAreaView>
-    </ImageBackground>
+
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 }
 
-// ⭐ OVERLAY ADDED (same as Login)
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: "rgba(0,0,0,0.35)",   // ⭐ TRANSPARENT DARK OVERLAY
+    backgroundColor: '#f7f8fa',
   },
   container: {
     flex: 1,
@@ -243,72 +296,165 @@ const styles = StyleSheet.create({
     maxWidth: 600,
   },
   header: {
-    fontSize: 35,
+    alignItems: 'center',
+    marginBottom: 32,
+  },
+  logoCircle: {
+    width: 70,
+    height: 70,
+    borderRadius: 35,
+    backgroundColor: '#003366',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 16,
+    shadowColor: '#003366',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  logoText: {
+    fontSize: 28,
     fontWeight: 'bold',
-    marginBottom: 30,
+    color: '#fff',
+  },
+  logoImage: {
+    width: 80,
+    height: 80,
+    marginBottom: 16,
+  },
+  headerTitle: {
+    fontSize: 28,
+    fontWeight: 'bold',
+    color: '#2d3436',
+    marginBottom: 8,
     textAlign: 'center',
-    color: 'white',
+  },
+  headerSubtitle: {
+    fontSize: 15,
+    color: '#636e72',
+    textAlign: 'center',
+    paddingHorizontal: 20,
+  },
+  formCard: {
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 24,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 4,
+  },
+  inputContainer: {
+    marginBottom: 24,
   },
   label: {
-    fontSize: 20,
+    fontSize: 14,
     fontWeight: '600',
-    color: 'white',
+    color: '#2d3436',
     marginBottom: 8,
-    marginTop: 5,
+  },
+  required: {
+    color: '#dc2626',
   },
   input: {
-    borderWidth: 1,
-    borderColor: '#ccc',
-    borderRadius: 10,
+    borderWidth: 1.5,
+    borderColor: '#dfe6e9',
+    borderRadius: 12,
     padding: 14,
     fontSize: 16,
-    backgroundColor: '#f9f9f9',
-    marginBottom: 20,
-  },
-  priceContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  dollarSign: {
-    fontSize: 25,
-    fontWeight: 'bold',
-    color: 'white',
-    marginRight: 8,
-  },
-  priceInput: {
-    flex: 1,
-    marginBottom: 0,
+    backgroundColor: '#fff',
+    color: '#2d3436',
   },
   textArea: {
     height: 120,
     textAlignVertical: 'top',
   },
-  button: {
-    backgroundColor: '#2e7bff',
+  helperText: {
+    fontSize: 12,
+    color: '#636e72',
+    marginTop: 6,
+    marginLeft: 4,
+  },
+  priceInputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1.5,
+    borderColor: '#dfe6e9',
+    borderRadius: 12,
+    backgroundColor: '#fff',
+    paddingLeft: 14,
+  },
+  dollarSign: {
+    fontSize: 20,
+    fontWeight: '600',
+    color: '#2d3436',
+    marginRight: 8,
+  },
+  priceInput: {
+    flex: 1,
+    padding: 14,
+    paddingLeft: 0,
+    fontSize: 16,
+    color: '#2d3436',
+  },
+  categoryScroll: {
+    marginTop: 4,
+  },
+  categoryChip: {
+    paddingVertical: 10,
+    paddingHorizontal: 18,
+    borderRadius: 20,
+    marginRight: 10,
+    backgroundColor: '#f0f3f7',
+    borderWidth: 1.5,
+    borderColor: '#e1e8ed',
+  },
+  categoryChipActive: {
+    backgroundColor: '#003366',
+    borderColor: '#003366',
+  },
+  categoryChipText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#636e72',
+  },
+  categoryChipTextActive: {
+    color: '#fff',
+  },
+  postButton: {
+    backgroundColor: '#003366',
     paddingVertical: 16,
-    borderRadius: 10,
+    borderRadius: 12,
     marginTop: 10,
+    alignItems: 'center',
+    shadowColor: '#003366',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
   },
   buttonDisabled: {
     opacity: 0.6,
   },
-  buttonText: {
+  postButtonText: {
     color: '#fff',
-    fontSize: 17,
-    fontWeight: '600',
-    textAlign: 'center',
+    fontSize: 16,
+    fontWeight: '700',
   },
   cancelButton: {
-    backgroundColor: '#f0f0f0',
+    backgroundColor: '#f0f3f7',
     paddingVertical: 16,
-    borderRadius: 10,
-    marginTop: 15,
+    borderRadius: 12,
+    marginTop: 12,
+    alignItems: 'center',
+    borderWidth: 1.5,
+    borderColor: '#e1e8ed',
   },
   cancelButtonText: {
-    color: '#666',
-    fontSize: 17,
+    color: '#636e72',
+    fontSize: 16,
     fontWeight: '600',
-    textAlign: 'center',
   },
 });

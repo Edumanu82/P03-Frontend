@@ -4,15 +4,14 @@ import React, { useState } from "react";
 import {
   FlatList,
   Image,
-  ImageBackground,
   Modal,
   SafeAreaView,
   ScrollView,
+  StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from "react-native";
-import { styles } from "../../styles/homeStyles";
 
 type RootStackParamList = {
   home: undefined;
@@ -102,7 +101,9 @@ export default function HomeScreen() {
   if (loading) {
     return (
       <SafeAreaView style={styles.safeArea}>
-        <Text style={{ textAlign: "center", marginTop: 20 }}>Loading...</Text>
+        <View style={styles.loadingContainer}>
+          <Text style={styles.loadingText}>Loading great deals...</Text>
+        </View>
       </SafeAreaView>
     );
   }
@@ -110,9 +111,9 @@ export default function HomeScreen() {
   if (error) {
     return (
       <SafeAreaView style={styles.safeArea}>
-        <Text style={{ color: "red", textAlign: "center", marginTop: 20 }}>
-          {error}
-        </Text>
+        <View style={styles.errorContainer}>
+          <Text style={styles.errorText}>{error}</Text>
+        </View>
       </SafeAreaView>
     );
   }
@@ -146,271 +147,505 @@ export default function HomeScreen() {
   });
 
   return (
-    <ImageBackground
-      source={require("../../assets/images/HOODDEALSLOGO4.webp")}
-      style={{ flex: 1, width: "100%", height: "100%" }}
-      resizeMode="stretch"
-    >
-      {/* Overlay to keep content readable */}
-      <SafeAreaView style={{ flex: 1, backgroundColor: "transparent"
- }}>
-        <View style={styles.container}>
+    <SafeAreaView style={styles.safeArea}>
+      <View style={styles.container}>
 
-          {/* Filter section inside header */}
-          <FlatList
-            data={filteredListings}
-            keyExtractor={(item) => item.id.toString()}
-            numColumns={numColumns}
-            key={numColumns}
-            columnWrapperStyle={isMultiColumn ? styles.row : undefined}
-            contentContainerStyle={styles.listContent}
-            ListHeaderComponent={
-              <View style={{ paddingBottom: 10 }}>
-                <Text style={styles.appTitle}>HoodDeals</Text>
+        {/* Header */}
+        <View style={styles.header}>
+          <View style={styles.logoContainer}>
+            <Image
+              source={require('../../assets/images/HOODDEALSLOGO3.webp')}
+              style={styles.logoImage}
+            />
+            <Text style={styles.appTitle}>HoodDeals</Text>
+          </View>
+        </View>
 
-                {/* FILTER BLOCK */}
-                <View
-                  style={{
-                    paddingHorizontal: 10,
-                    paddingTop: 5,
-                    paddingBottom: 5,
-                    backgroundColor: "white",
-                    borderRadius: 12,
-                    marginTop: 6,
-                    marginBottom: 10,
-                    opacity: 0.95,
-                  }}
-                >
-                  {/* CATEGORY FILTER */}
-                  <ScrollView
-                    horizontal
-                    showsHorizontalScrollIndicator={false}
-                    style={{ marginBottom: 8 }}
-                  >
-                    {categories.map((cat) => (
-                      <TouchableOpacity
-                        key={cat}
-                        onPress={() => setSelectedCategory(cat)}
-                        style={{
-                          paddingVertical: 8,
-                          paddingHorizontal: 20,
-                          borderRadius: 50,
-                          marginRight: 10,
-                          backgroundColor:
-                            selectedCategory === cat ? "#2e7bff" : "#f2f2f2",
-                        }}
-                      >
-                        <Text
-                          style={{
-                            color: selectedCategory === cat ? "white" : "#333",
-                            fontWeight: "600",
-                            fontSize: 16,
-                          }}
-                        >
-                          {cat}
-                        </Text>
-                      </TouchableOpacity>
-                    ))}
-                  </ScrollView>
-
-                  {/* PRICE FILTER */}
-                  <ScrollView
-                    horizontal
-                    showsHorizontalScrollIndicator={false}
-                    style={{ marginBottom: 6 }}
-                  >
-                    {priceRanges.map((range) => (
-                      <TouchableOpacity
-                        key={range}
-                        onPress={() => setSelectedPriceRange(range)}
-                        style={{
-                          paddingVertical: 8,
-                          paddingHorizontal: 20,
-                          borderRadius: 50,
-                          marginRight: 10,
-                          backgroundColor:
-                            selectedPriceRange === range ? "#2e7bff" : "#f2f2f2",
-                        }}
-                      >
-                        <Text
-                          style={{
-                            color: selectedPriceRange === range ? "white" : "#333",
-                            fontWeight: "600",
-                            fontSize: 16,
-                          }}
-                        >
-                          {range}
-                        </Text>
-                      </TouchableOpacity>
-                    ))}
-                  </ScrollView>
-                </View>
-              </View>
-            }
-            renderItem={({ item }) => (
-              <TouchableOpacity
-                style={[styles.card, { width: isMultiColumn ? "48%" : "100%" }]}
-                onPress={() => {
-                  setSelectedListing(item);
-                  setModalVisible(true);
-                }}
+        <FlatList
+          data={filteredListings}
+          keyExtractor={(item) => item.id.toString()}
+          numColumns={numColumns}
+          key={numColumns}
+          columnWrapperStyle={isMultiColumn ? styles.row : undefined}
+          contentContainerStyle={styles.listContent}
+          ListHeaderComponent={
+            <View style={styles.filterSection}>
+              {/* Category Filter */}
+              <Text style={styles.filterLabel}>Categories</Text>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                style={styles.filterScroll}
               >
-                <Image
-                  source={{
-                    uri:
-                      item.imageUrl ||
-                      item.image_url ||
-                      "https://via.placeholder.com/300x200.png?text=No+Image",
-                  }}
-                  style={[styles.image, { resizeMode: "cover" }]}
-                />
+                {categories.map((cat) => (
+                  <TouchableOpacity
+                    key={cat}
+                    onPress={() => setSelectedCategory(cat)}
+                    style={[
+                      styles.filterChip,
+                      selectedCategory === cat && styles.filterChipActive,
+                    ]}
+                    activeOpacity={0.7}
+                  >
+                    <Text
+                      style={[
+                        styles.filterChipText,
+                        selectedCategory === cat && styles.filterChipTextActive,
+                      ]}
+                    >
+                      {cat}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
 
-                <Text style={styles.title}>{item.title}</Text>
-                <Text style={styles.price}>${item.price}</Text>
-                <Text style={styles.category}>{item.category}</Text>
-              </TouchableOpacity>
-            )}
-          />
+              {/* Price Filter */}
+              <Text style={[styles.filterLabel, { marginTop: 12 }]}>Price Range</Text>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                style={styles.filterScroll}
+              >
+                {priceRanges.map((range) => (
+                  <TouchableOpacity
+                    key={range}
+                    onPress={() => setSelectedPriceRange(range)}
+                    style={[
+                      styles.filterChip,
+                      selectedPriceRange === range && styles.filterChipActive,
+                    ]}
+                    activeOpacity={0.7}
+                  >
+                    <Text
+                      style={[
+                        styles.filterChipText,
+                        selectedPriceRange === range && styles.filterChipTextActive,
+                      ]}
+                    >
+                      {range}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
 
-          {/* ⭐ Details Modal (unchanged) */}
-          <Modal
-            visible={modalVisible}
-            animationType="slide"
-            transparent={true}
-            onRequestClose={() => setModalVisible(false)}
-          >
-            <View
-              style={{
-                flex: 1,
-                justifyContent: "center",
-                alignItems: "center",
-                backgroundColor: "rgba(0,0,0,0.5)",
+              {/* Results count */}
+              <Text style={styles.resultsText}>
+                {filteredListings.length} {filteredListings.length === 1 ? 'item' : 'items'} found
+              </Text>
+            </View>
+          }
+          renderItem={({ item }) => (
+            <TouchableOpacity
+              style={[styles.card, { width: isMultiColumn ? "48%" : "100%" }]}
+              onPress={() => {
+                setSelectedListing(item);
+                setModalVisible(true);
               }}
+              activeOpacity={0.9}
             >
-              <View
-                style={{
-                  width: "90%",
-                  maxHeight: "85%",
-                  backgroundColor: "#fff",
-                  borderRadius: 12,
-                  padding: 20,
+              <Image
+                source={{
+                  uri:
+                    item.imageUrl ||
+                    item.image_url ||
+                    "https://via.placeholder.com/300x200.png?text=No+Image",
                 }}
-              >
-                <ScrollView>
-                  {selectedListing && (
-                    <>
-                      <Text
-                        style={{
-                          fontSize: 22,
-                          fontWeight: "700",
-                          marginBottom: 10,
-                          textAlign: "center",
-                        }}
-                      >
+                style={styles.cardImage}
+              />
+
+              <View style={styles.cardContent}>
+                <Text style={styles.cardTitle} numberOfLines={2}>
+                  {item.title}
+                </Text>
+                <Text style={styles.cardPrice}>${item.price}</Text>
+                {item.category && (
+                  <View style={styles.categoryBadge}>
+                    <Text style={styles.categoryBadgeText}>{item.category}</Text>
+                  </View>
+                )}
+                {item.location && (
+                  <Text style={styles.cardLocation} numberOfLines={1}>
+                    📍 {item.location}
+                  </Text>
+                )}
+              </View>
+            </TouchableOpacity>
+          )}
+        />
+
+        {/* Details Modal */}
+        <Modal
+          visible={modalVisible}
+          animationType="slide"
+          transparent={true}
+          onRequestClose={() => setModalVisible(false)}
+        >
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalContent}>
+              <ScrollView showsVerticalScrollIndicator={false}>
+                {selectedListing && (
+                  <>
+                    {/* Image */}
+                    <Image
+                      source={{
+                        uri:
+                          selectedListing.imageUrl ||
+                          selectedListing.image_url ||
+                          "https://via.placeholder.com/400x300.png?text=No+Image",
+                      }}
+                      style={styles.modalImage}
+                    />
+
+                    {/* Content */}
+                    <View style={styles.modalBody}>
+                      <Text style={styles.modalTitle}>
                         {selectedListing.title}
                       </Text>
 
-                      <Image
-                        source={{
-                          uri:
-                            selectedListing.imageUrl ||
-                            selectedListing.image_url ||
-                            "https://via.placeholder.com/400x300.png?text=No+Image",
-                        }}
-                        style={{
-                          width: "100%",
-                          height: 220,
-                          borderRadius: 10,
-                          marginBottom: 15,
-                          resizeMode: "contain",
-                        }}
-                      />
-
-                      <Text
-                        style={{
-                          fontSize: 20,
-                          fontWeight: "600",
-                          color: "#2E8B57",
-                          marginBottom: 10,
-                          textAlign: "center",
-                        }}
-                      >
+                      <Text style={styles.modalPrice}>
                         ${selectedListing.price}
                       </Text>
 
-                      <Text
-                        style={{
-                          fontSize: 16,
-                          color: "#333",
-                          marginBottom: 10,
-                        }}
-                      >
-                        {selectedListing.description ||
-                          "No description provided."}
-                      </Text>
-
-                      <Text style={{ fontSize: 15, color: "#666", marginBottom: 6 }}>
-                        Category: {selectedListing.category || "N/A"}
-                      </Text>
-
-                      <Text style={{ fontSize: 15, color: "#666", marginBottom: 6 }}>
-                        Location: {selectedListing.location || "N/A"}
-                      </Text>
-
-                      {selectedListing.userName && (
-                        <View style={{ marginTop: 10 }}>
-                          <Text
-                            style={{
-                              fontSize: 15,
-                              color: "#444",
-                              fontWeight: "600",
-                            }}
-                          >
-                            Seller: {selectedListing.userName}
+                      {selectedListing.category && (
+                        <View style={styles.modalCategoryBadge}>
+                          <Text style={styles.modalCategoryText}>
+                            {selectedListing.category}
                           </Text>
-                          {selectedListing.userPicture && (
-                            <Image
-                              source={{ uri: selectedListing.userPicture }}
-                              style={{
-                                width: 60,
-                                height: 60,
-                                borderRadius: 30,
-                                marginTop: 8,
-                                alignSelf: "center",
-                              }}
-                            />
-                          )}
                         </View>
                       )}
-                    </>
-                  )}
-                </ScrollView>
 
-                <TouchableOpacity
-                  onPress={() => setModalVisible(false)}
-                  style={{
-                    marginTop: 15,
-                    backgroundColor: "#2e7bff",
-                    borderRadius: 8,
-                    padding: 12,
-                  }}
-                >
-                  <Text
-                    style={{
-                      color: "white",
-                      textAlign: "center",
-                      fontWeight: "600",
-                      fontSize: 16,
-                    }}
-                  >
-                    Close
-                  </Text>
-                </TouchableOpacity>
-              </View>
+                      {selectedListing.location && (
+                        <View style={styles.modalInfoRow}>
+                          <Text style={styles.modalInfoLabel}>Location:</Text>
+                          <Text style={styles.modalInfoText}>
+                            {selectedListing.location}
+                          </Text>
+                        </View>
+                      )}
+
+                      {/* Description */}
+                      <View style={styles.modalSection}>
+                        <Text style={styles.modalSectionTitle}>Description</Text>
+                        <Text style={styles.modalDescription}>
+                          {selectedListing.description ||
+                            "No description provided."}
+                        </Text>
+                      </View>
+
+                      {/* Seller Info */}
+                      {selectedListing.userName && (
+                        <View style={styles.modalSection}>
+                          <Text style={styles.modalSectionTitle}>Seller</Text>
+                          <View style={styles.sellerInfo}>
+                            {selectedListing.userPicture && (
+                              <Image
+                                source={{ uri: selectedListing.userPicture }}
+                                style={styles.sellerImage}
+                              />
+                            )}
+                            <Text style={styles.sellerName}>
+                              {selectedListing.userName}
+                            </Text>
+                          </View>
+                        </View>
+                      )}
+                    </View>
+                  </>
+                )}
+              </ScrollView>
+
+              {/* Close Button */}
+              <TouchableOpacity
+                onPress={() => setModalVisible(false)}
+                style={styles.modalCloseButton}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.modalCloseButtonText}>Close</Text>
+              </TouchableOpacity>
             </View>
-          </Modal>
-        </View>
-      </SafeAreaView>
-    </ImageBackground>
+          </View>
+        </Modal>
+      </View>
+    </SafeAreaView>
   );
 }
+
+const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: "#f7f8fa",
+  },
+  container: {
+    flex: 1,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  loadingText: {
+    fontSize: 16,
+    color: "#636e72",
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: 20,
+  },
+  errorText: {
+    fontSize: 16,
+    color: "#d63031",
+    textAlign: "center",
+  },
+  header: {
+    backgroundColor: "#fff",
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: "#e1e8ed",
+  },
+  logoContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  logoCircle: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: "#003366",
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: 12,
+  },
+  logoText: {
+    fontSize: 18,
+    fontWeight: "bold",
+    color: "#fff",
+  },
+  appTitle: {
+    fontSize: 24,
+    fontWeight: "bold",
+    color: "#2d3436",
+  },
+  filterSection: {
+    backgroundColor: "#fff",
+    paddingHorizontal: 16,
+    paddingTop: 16,
+    paddingBottom: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: "#e1e8ed",
+  },
+  filterLabel: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#2d3436",
+    marginBottom: 8,
+  },
+  filterScroll: {
+    marginBottom: 8,
+  },
+  filterChip: {
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 20,
+    marginRight: 8,
+    backgroundColor: "#f0f3f7",
+    borderWidth: 1,
+    borderColor: "#e1e8ed",
+  },
+  filterChipActive: {
+    backgroundColor: "#003366",
+    borderColor: "#003366",
+  },
+  filterChipText: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#636e72",
+  },
+  filterChipTextActive: {
+    color: "#fff",
+  },
+  resultsText: {
+    fontSize: 13,
+    color: "#636e72",
+    marginTop: 8,
+    fontWeight: "500",
+  },
+  listContent: {
+    paddingHorizontal: 12,
+    paddingTop: 12,
+    paddingBottom: 20,
+  },
+  row: {
+    justifyContent: "space-between",
+    marginBottom: 12,
+  },
+  card: {
+    backgroundColor: "#fff",
+    borderRadius: 12,
+    marginBottom: 12,
+    overflow: "hidden",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  cardImage: {
+    width: "100%",
+    height: 160,
+    backgroundColor: "#f0f3f7",
+  },
+  cardContent: {
+    padding: 12,
+  },
+  cardTitle: {
+    fontSize: 15,
+    fontWeight: "600",
+    color: "#2d3436",
+    marginBottom: 6,
+  },
+  cardPrice: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: "#003366",
+    marginBottom: 8,
+  },
+  categoryBadge: {
+    alignSelf: "flex-start",
+    backgroundColor: "#f0f3f7",
+    paddingVertical: 4,
+    paddingHorizontal: 10,
+    borderRadius: 12,
+    marginBottom: 6,
+  },
+  categoryBadgeText: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: "#636e72",
+  },
+  cardLocation: {
+    fontSize: 12,
+    color: "#636e72",
+  },
+  modalOverlay: {
+    flex: 1,
+    justifyContent: "flex-end",
+    backgroundColor: "rgba(0,0,0,0.5)",
+  },
+  logoImage: {
+    width: 40,
+    height: 40,
+    marginBottom: 16,
+    borderRadius: 40,
+  },
+  modalContent: {
+    backgroundColor: "#fff",
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    maxHeight: "90%",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 8,
+  },
+  modalImage: {
+    width: "100%",
+    height: 300,
+    backgroundColor: "#f0f3f7",
+  },
+  modalBody: {
+    padding: 20,
+  },
+  modalTitle: {
+    fontSize: 22,
+    fontWeight: "700",
+    color: "#2d3436",
+    marginBottom: 8,
+  },
+  modalPrice: {
+    fontSize: 28,
+    fontWeight: "700",
+    color: "#003366",
+    marginBottom: 12,
+  },
+  modalCategoryBadge: {
+    alignSelf: "flex-start",
+    backgroundColor: "#f0f3f7",
+    paddingVertical: 6,
+    paddingHorizontal: 14,
+    borderRadius: 16,
+    marginBottom: 16,
+  },
+  modalCategoryText: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#636e72",
+  },
+  modalInfoRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 12,
+  },
+  modalInfoLabel: {
+    fontSize: 15,
+    fontWeight: "600",
+    color: "#636e72",
+    marginRight: 8,
+  },
+  modalInfoText: {
+    fontSize: 15,
+    color: "#2d3436",
+    flex: 1,
+  },
+  modalSection: {
+    marginTop: 20,
+  },
+  modalSectionTitle: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: "#2d3436",
+    marginBottom: 8,
+  },
+  modalDescription: {
+    fontSize: 15,
+    color: "#636e72",
+    lineHeight: 22,
+  },
+  sellerInfo: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  sellerImage: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    marginRight: 12,
+    backgroundColor: "#f0f3f7",
+  },
+  sellerName: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#2d3436",
+  },
+  modalCloseButton: {
+    backgroundColor: "#003366",
+    marginHorizontal: 20,
+    marginVertical: 20,
+    paddingVertical: 16,
+    borderRadius: 12,
+    alignItems: "center",
+    shadowColor: "#003366",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  modalCloseButtonText: {
+    color: "#fff",
+    fontWeight: "700",
+    fontSize: 16,
+  },
+});
