@@ -52,7 +52,7 @@ export default function HomeScreen() {
   const numColumns = 2;
   const isMultiColumn = numColumns > 1;
 
-  const categories = ["All", "Cars", "Electronics", "Clothing", "Furniture", "Food"];
+  const categories = ["All", "Cars", "Electronics", "Clothing", "Furniture", "Food", "Other"];
   const priceRanges = [
     "All",
     "Under $100",
@@ -157,7 +157,7 @@ export default function HomeScreen() {
               source={require('../../assets/images/HOODDEALSLOGO3.webp')}
               style={styles.logoImage}
             />
-            <Text style={styles.appTitle}>HoodDeals</Text>
+            <Text style={styles.appTitle}>  HoodDeals</Text>
           </View>
         </View>
 
@@ -400,7 +400,8 @@ const styles = StyleSheet.create({
   },
   header: {
     backgroundColor: "#fff",
-    paddingVertical: 12,
+    paddingTop: 50,
+    paddingVertical: 8,
     paddingHorizontal: 16,
     borderBottomWidth: 1,
     borderBottomColor: "#e1e8ed",
@@ -424,7 +425,7 @@ const styles = StyleSheet.create({
     color: "#fff",
   },
   appTitle: {
-    fontSize: 24,
+    fontSize: 28,
     fontWeight: "bold",
     color: "#2d3436",
   },
@@ -535,8 +536,8 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(0,0,0,0.5)",
   },
   logoImage: {
-    width: 40,
-    height: 40,
+    width: 80,
+    height: 80,
     marginBottom: 16,
     borderRadius: 40,
   },

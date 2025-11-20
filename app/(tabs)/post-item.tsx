@@ -384,9 +384,10 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
   logoImage: {
-    width: 80,
-    height: 80,
+    width: 200,
+    height: 200,
     marginBottom: 16,
+    borderRadius: 80,
   },
   buttonDisabled: {
     opacity: 0.6,

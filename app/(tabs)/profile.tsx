@@ -273,7 +273,7 @@ export default function ProfileScreen() {
             source={require('../../assets/images/HOODDEALSLOGO3.webp')}
             style={styles.logoImage}
           />
-          <Text style={styles.headerTitle}>Profile</Text>
+          <Text style={styles.headerTitle}>  Profile</Text>
         </View>
 
         {/* Profile Card */}
@@ -412,7 +412,7 @@ const styles = StyleSheet.create({
     color: '#fff',
   },
   headerTitle: {
-    fontSize: 24,
+    fontSize: 28,
     fontWeight: 'bold',
     color: '#2d3436',
   },
@@ -683,8 +683,8 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   logoImage: {
-    width: 40,
-    height: 40,
+    width: 80,
+    height: 80,
     marginBottom: 16,
     borderRadius: 40,
   },

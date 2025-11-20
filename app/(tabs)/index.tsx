@@ -471,8 +471,8 @@ const styles = StyleSheet.create({
     marginBottom: 32,
   },
   logoImage: {
-    width: 80,
-    height: 80,
+    width: 250,
+    height: 250,
     marginBottom: 16,
   },
   logoCircle: {
