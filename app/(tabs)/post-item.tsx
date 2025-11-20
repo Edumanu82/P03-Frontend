@@ -1,8 +1,12 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { router } from 'expo-router';
-import React, { useState } from 'react';
+import * as FileSystem from "expo-file-system";
+import * as ImagePicker from "expo-image-picker";
+import { router } from "expo-router";
+import React, { useState } from "react";
 import {
-  Alert, Image, KeyboardAvoidingView,
+  Alert,
+  Image,
+  KeyboardAvoidingView,
   Platform,
   ScrollView,
   StyleSheet,
@@ -10,59 +14,126 @@ import {
   TextInput,
   TouchableOpacity,
   View,
-  useWindowDimensions
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+  useWindowDimensions,
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { supabase } from "../../supabaseClient";
 
 const showAlert = (title: string, message: string) => {
-  if (Platform.OS === 'android') {
-    setTimeout(() => {
-      Alert.alert(title, message);
-    }, 500);
-  } else {
-    Alert.alert(title, message);
-  }
+  Alert.alert(title, message);
 };
 
 export default function PostItemScreen() {
   const { width } = useWindowDimensions();
-  const [title, setTitle] = useState('');
-  const [price, setPrice] = useState('');
-  const [description, setDescription] = useState('');
-  const [imageUrl, setImageUrl] = useState('');
-  const [category, setCategory] = useState('');
-  const [location, setLocation] = useState('');
+
+  const [title, setTitle] = useState("");
+  const [price, setPrice] = useState("");
+  const [description, setDescription] = useState("");
+  const [category, setCategory] = useState("");
+  const [location, setLocation] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const isLargeScreen = width > 768;
-  const containerWidth = isLargeScreen ? Math.min(600, width * 0.9) : '100%';
+  const [localImage, setLocalImage] = useState<string | null>(null);
+  const [imageUrl, setImageUrl] = useState("");
 
-  const categoryOptions = ['Cars', 'Electronics', 'Clothing', 'Furniture', 'Food', 'Other'];
+  const categoryOptions = ["Cars", "Electronics", "Clothing", "Furniture", "Food", "Other"]; // What we have so far.
+
+  const handlePickImage = async () => {
+    if (Platform.OS === "web") {
+      const input = document.createElement("input");
+      input.type = "file";
+      input.accept = "image/*";
+      input.onchange = async (e: any) => {
+        const file = e.target.files[0];
+        if (file) {
+          setLocalImage(URL.createObjectURL(file));
+          await uploadImageWeb(file);
+        }
+      };
+      input.click();
+    } else {
+      let result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        quality: 0.8,
+        base64: false,
+      });
+
+      if (!result.canceled) {
+        const uri = result.assets[0].uri;
+        setLocalImage(uri);
+        await uploadImageNative(uri);
+      }
+    }
+  };
+
+  const uploadImageWeb = async (file: File) => {
+    try {
+      setLoading(true);
+      const fileExt = file.name.split(".").pop();
+      const fileName = `${Date.now()}.${fileExt}`;
+      const { data, error } = await supabase.storage
+        .from("images")
+        .upload(fileName, file);
+
+      if (error) throw error;
+
+      const { data: publicData } = supabase.storage
+        .from("images")
+        .getPublicUrl(fileName);
+
+      setImageUrl(publicData.publicUrl);
+      showAlert("Success", "Image uploaded!");
+    } catch (err: any) {
+      showAlert("Upload Error", err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const uploadImageNative = async (uri: string) => {
+    try {
+      setLoading(true);
+      const base64 = await FileSystem.readAsStringAsync(uri, { encoding: "base64" });
+      const fileExt = uri.split(".").pop() || "jpg";
+      const fileName = `${Date.now()}.${fileExt}`;
+
+      const { data, error } = await supabase.storage
+        .from("images")
+        .upload(fileName, Buffer.from(base64, "base64"), {
+          contentType: "image/jpeg",
+          upsert: false,
+        });
+
+      if (error) throw error;
+
+      const { data: publicData } = supabase.storage
+        .from("images")
+        .getPublicUrl(fileName);
+
+      setImageUrl(publicData.publicUrl);
+      showAlert("Success", "Image uploaded!");
+    } catch (err: any) {
+      showAlert("Upload Error", err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handlePost = async () => {
-    if (!title.trim()) {
-      showAlert("Error", "Please enter an item title");
-      return;
-    }
-
-    if (!price.trim()) {
-      showAlert("Error", "Please enter a price");
-      return;
-    }
+    if (!title.trim()) return showAlert("Error", "Please enter a title.");
+    if (!price.trim()) return showAlert("Error", "Please enter a price.");
+    if (!imageUrl) return showAlert("Error", "Please upload an image first.");
 
     const priceNumber = parseFloat(price);
-    if (isNaN(priceNumber) || priceNumber <= 0) {
-      showAlert("Error", "Please enter a valid price");
-      return;
-    }
+    if (isNaN(priceNumber) || priceNumber <= 0) return showAlert("Error", "Invalid price.");
 
     try {
       setLoading(true);
       const token = await AsyncStorage.getItem("token");
-
       if (!token) {
-        showAlert("Error", "You must be logged in to post items");
-        router.push('/');
+        showAlert("Error", "You must be logged in.");
+        router.push("/");
         return;
       }
 
@@ -70,45 +141,41 @@ export default function PostItemScreen() {
         title: title.trim(),
         description: description.trim() || null,
         price: priceNumber,
-        imageUrl: imageUrl.trim(),
+        imageUrl,
         category: category.trim() || null,
         location: location.trim() || null,
         user_id: await AsyncStorage.getItem("userID"),
       };
 
       const encoded = btoa(`user:password`);
-      const response = await fetch('https://hood-deals-3827cb9a0599.herokuapp.com/api/listings', {
-        method: 'POST',
-        headers: {
-          "Authorization": `Basic ${encoded}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(requestBody),
-      });
+      const response = await fetch(
+        "https://hood-deals-3827cb9a0599.herokuapp.com/api/listings",
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Basic ${encoded}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(requestBody),
+        }
+      );
 
       const data = await response.json();
+      if (!response.ok) return showAlert("Error", data.error || "Listing failed.");
 
-      if (!response.ok) {
-        showAlert("Error", data.error || data.message || "Failed to create listing");
-        return;
-      }
+      showAlert("Success", "Your listing is live!");
 
-      showAlert("Success", "Your item has been listed!");
+      setTitle("");
+      setPrice("");
+      setDescription("");
+      setCategory("");
+      setLocation("");
+      setLocalImage(null);
+      setImageUrl("");
 
-      setTitle('');
-      setPrice('');
-      setDescription('');
-      setImageUrl('');
-      setCategory('');
-      setLocation('');
-
-      setTimeout(() => {
-        router.push('/home');
-      }, 1000);
-
-    } catch (error) {
-      console.error("Post item error:", error);
-      showAlert("Error", "Network error. Please check your connection and try again.");
+      router.push("/home");
+    } catch (err: any) {
+      showAlert("Error", err.message);
     } finally {
       setLoading(false);
     }
@@ -117,15 +184,11 @@ export default function PostItemScreen() {
   return (
     <SafeAreaView style={styles.safeArea}>
       <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        style={styles.container}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        style={{ flex: 1 }}
       >
-        <ScrollView
-          contentContainerStyle={styles.scroll}
-          showsVerticalScrollIndicator={false}
-        >
-          <View style={[styles.formContainer, { width: containerWidth }]}>
-
+        <ScrollView contentContainerStyle={styles.scroll}>
+          <View style={styles.formContainer}>
             {/* Header */}
             <View style={styles.header}>
               <Image
@@ -138,7 +201,6 @@ export default function PostItemScreen() {
 
             {/* Form Card */}
             <View style={styles.formCard}>
-
               {/* Title Input */}
               <View style={styles.inputContainer}>
                 <Text style={styles.label}>Title <Text style={styles.required}>*</Text></Text>
@@ -214,22 +276,18 @@ export default function PostItemScreen() {
                 </Text>
               </View>
 
-              {/* Image URL Input */}
-              <View style={styles.inputContainer}>
-                <Text style={styles.label}>Image URL</Text>
-                <TextInput
-                  placeholder="https://example.com/image.jpg"
-                  placeholderTextColor="#999"
-                  style={styles.input}
-                  value={imageUrl}
-                  onChangeText={setImageUrl}
-                  autoCapitalize="none"
-                  keyboardType="url"
+              {/* PICK IMAGE */}
+              <TouchableOpacity style={styles.imageButton} onPress={handlePickImage}>
+                <Text style={styles.imageButtonText}>Add an Image</Text>
+              </TouchableOpacity>
+              {/* PREVIEW */}
+              {(localImage || imageUrl) && (
+                <Image
+                  source={{ uri: localImage || imageUrl }}
+                  style={{ width: "100%", height: 200, borderRadius: 12, marginBottom: 16 }}
+                  resizeMode="cover"
                 />
-                <Text style={styles.helperText}>
-                  Add a link to a photo of your item
-                </Text>
-              </View>
+              )}
 
               {/* Location Input */}
               <View style={styles.inputContainer}>
@@ -267,9 +325,7 @@ export default function PostItemScreen() {
               >
                 <Text style={styles.cancelButtonText}>Cancel</Text>
               </TouchableOpacity>
-
             </View>
-
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -278,50 +334,31 @@ export default function PostItemScreen() {
 }
 
 const styles = StyleSheet.create({
-  safeArea: {
+  safeArea: { flex: 1, backgroundColor: "#f7f8fa" },
+  scroll: { padding: 20 },
+  formContainer: { width: "100%", maxWidth: 600, alignSelf: "center" },
+  header: { alignItems: 'center', marginBottom: 32, },
+  imageButton: { backgroundColor: "#003366", padding: 14, borderRadius: 10, marginBottom: 16 },
+  imageButtonText: { color: "#fff", textAlign: "center", fontWeight: "600", fontSize: 16 },
+  input: {
+    borderWidth: 1.5,
+    borderColor: "#dfe6e9",
+    borderRadius: 12,
+    padding: 14,
+    fontSize: 16,
+    marginBottom: 12,
+    backgroundColor: "#fff",
+    color: "#2d3436",
+  },
+  categoryScroll: {
+    marginTop: 4,
+  },
+  priceInput: {
     flex: 1,
-    backgroundColor: '#f7f8fa',
-  },
-  container: {
-    flex: 1,
-  },
-  scroll: {
-    flexGrow: 1,
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 40,
-  },
-  formContainer: {
-    width: '100%',
-    maxWidth: 600,
-  },
-  header: {
-    alignItems: 'center',
-    marginBottom: 32,
-  },
-  logoCircle: {
-    width: 70,
-    height: 70,
-    borderRadius: 35,
-    backgroundColor: '#003366',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 16,
-    shadowColor: '#003366',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 8,
-  },
-  logoText: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#fff',
-  },
-  logoImage: {
-    width: 80,
-    height: 80,
-    marginBottom: 16,
+    padding: 14,
+    paddingLeft: 0,
+    fontSize: 16,
+    color: '#2d3436',
   },
   headerTitle: {
     fontSize: 28,
@@ -346,30 +383,13 @@ const styles = StyleSheet.create({
     shadowRadius: 12,
     elevation: 4,
   },
-  inputContainer: {
-    marginBottom: 24,
+  logoImage: {
+    width: 80,
+    height: 80,
+    marginBottom: 16,
   },
-  label: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#2d3436',
-    marginBottom: 8,
-  },
-  required: {
-    color: '#dc2626',
-  },
-  input: {
-    borderWidth: 1.5,
-    borderColor: '#dfe6e9',
-    borderRadius: 12,
-    padding: 14,
-    fontSize: 16,
-    backgroundColor: '#fff',
-    color: '#2d3436',
-  },
-  textArea: {
-    height: 120,
-    textAlignVertical: 'top',
+  buttonDisabled: {
+    opacity: 0.6,
   },
   helperText: {
     fontSize: 12,
@@ -392,52 +412,27 @@ const styles = StyleSheet.create({
     color: '#2d3436',
     marginRight: 8,
   },
-  priceInput: {
-    flex: 1,
-    padding: 14,
-    paddingLeft: 0,
-    fontSize: 16,
-    color: '#2d3436',
+  textArea: {
+    height: 120,
+    textAlignVertical: 'top',
   },
-  categoryScroll: {
-    marginTop: 4,
+  required: {
+    color: '#dc2626',
   },
-  categoryChip: {
-    paddingVertical: 10,
-    paddingHorizontal: 18,
-    borderRadius: 20,
-    marginRight: 10,
-    backgroundColor: '#f0f3f7',
-    borderWidth: 1.5,
-    borderColor: '#e1e8ed',
+  inputContainer: {
+    marginBottom: 24,
   },
-  categoryChipActive: {
-    backgroundColor: '#003366',
-    borderColor: '#003366',
-  },
-  categoryChipText: {
+  label: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#636e72',
+    color: '#2d3436',
+    marginBottom: 8,
   },
-  categoryChipTextActive: {
-    color: '#fff',
-  },
-  postButton: {
-    backgroundColor: '#003366',
-    paddingVertical: 16,
-    borderRadius: 12,
-    marginTop: 10,
-    alignItems: 'center',
-    shadowColor: '#003366',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  buttonDisabled: {
-    opacity: 0.6,
-  },
+  postButton: { backgroundColor: "#003366", padding: 16, borderRadius: 12, marginTop: 12 },
+  categoryChip: { paddingVertical: 8, paddingHorizontal: 16, borderRadius: 20, marginRight: 10, backgroundColor: "#f0f3f7" },
+  categoryChipActive: { backgroundColor: "#003366" },
+  categoryChipText: { fontWeight: "600", color: "#636e72" },
+  categoryChipTextActive: { color: "#fff" },
   postButtonText: {
     color: '#fff',
     fontSize: 16,
