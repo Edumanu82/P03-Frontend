@@ -39,14 +39,15 @@ type Listing = {
   location?: string;
 };
 
-function onPressMessage(Listing: Listing) {
-  console.log("Message button pressed");
-  router.push({
-    pathname: "../newMessage",
-    params: { userId: Listing.user_id, userName: Listing.userName }
-  });
-  // Implement navigation to conversation screen if needed
-}
+// function onPressMessage(Listing: Listing) {
+//   console.log("Message button pressed");
+//   router.push({
+//     pathname: "../newMessage",
+//     params: { userId: Listing.user_id, userName: Listing.userName }
+//   });
+//   // Implement navigation to conversation screen if needed
+//   setModalVisible(false);
+// }
 
 export default function HomeScreen() {
   const [listings, setListings] = useState<Listing[]>([]);
@@ -71,6 +72,16 @@ export default function HomeScreen() {
     "$500 - $1000",
     "Above $1000",
   ];
+
+  function onPressMessage(Listing: Listing) {
+    console.log("Message button pressed");
+    router.push({
+      pathname: "../newMessage",
+      params: { userId: Listing.user_id, userName: Listing.userName, pfp: Listing.userPicture }
+    });
+    // Implement navigation to conversation screen if needed
+    setModalVisible(false);
+  }
 
   useFocusEffect(
     React.useCallback(() => {
