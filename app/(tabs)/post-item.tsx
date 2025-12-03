@@ -1,8 +1,10 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { router } from 'expo-router';
-import React, { useState } from 'react';
+import * as ImagePicker from "expo-image-picker";
+import { router } from "expo-router";
+import React, { useState } from "react";
 import {
   Alert,
+  Image,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -11,62 +13,127 @@ import {
   TextInput,
   TouchableOpacity,
   View,
-  useWindowDimensions
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+  useWindowDimensions,
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { supabase } from "../../supabaseClient";
 
 const showAlert = (title: string, message: string) => {
-  if (Platform.OS === 'android') {
-    setTimeout(() => {
-      Alert.alert(title, message);
-    }, 500);
-  } else {
-    Alert.alert(title, message);
-  }
+  Alert.alert(title, message);
 };
 
 export default function PostItemScreen() {
   const { width } = useWindowDimensions();
-  const [title, setTitle] = useState('');
-  const [price, setPrice] = useState('');
-  const [description, setDescription] = useState('');
-  const [imageUrl, setImageUrl] = useState('');
-  const [category, setCategory] = useState('');
-  const [location, setLocation] = useState('');
-  const [user_id, setUserId] = useState('');
+
+  const [title, setTitle] = useState("");
+  const [price, setPrice] = useState("");
+  const [description, setDescription] = useState("");
+  const [category, setCategory] = useState("");
+  const [location, setLocation] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const isLargeScreen = width > 768;
-  const containerWidth = isLargeScreen ? Math.min(600, width * 0.9) : '100%';
+  const [localImage, setLocalImage] = useState<string | null>(null);
+  const [imageUrl, setImageUrl] = useState("");
+
+  const categoryOptions = ["Cars", "Electronics", "Clothing", "Furniture", "Food", "Other"]; // What we have so far.
+
+  const handlePickImage = async () => {
+    if (Platform.OS === "web") {
+      const input = document.createElement("input");
+      input.type = "file";
+      input.accept = "image/*";
+      input.onchange = async (e: any) => {
+        const file = e.target.files[0];
+        if (file) {
+          setLocalImage(URL.createObjectURL(file));
+          await uploadImageWeb(file);
+        }
+      };
+      input.click();
+    } else {
+      let result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        quality: 0.8,
+        base64: false,
+      });
+
+      if (!result.canceled) {
+        const uri = result.assets[0].uri;
+        setLocalImage(uri);
+        await uploadImageNative(uri);
+      }
+    }
+  };
+
+  const uploadImageWeb = async (file: File) => {
+    try {
+      setLoading(true);
+      const fileExt = file.name.split(".").pop();
+      const fileName = `${Date.now()}.${fileExt}`;
+      const { data, error } = await supabase.storage
+        .from("images")
+        .upload(fileName, file);
+
+      if (error) throw error;
+
+      const { data: publicData } = supabase.storage
+        .from("images")
+        .getPublicUrl(fileName);
+
+      setImageUrl(publicData.publicUrl);
+      showAlert("Success", "Image uploaded!");
+    } catch (err: any) {
+      showAlert("Upload Error", err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const uploadImageNative = async (uri: string) => {
+    try {
+      setLoading(true);
+
+      const fileExt = uri.split('.').pop() || 'jpg';
+      const fileName = `${Date.now()}.${fileExt}`;
+
+      const response = await fetch(uri);          // Fetch the file
+      const arrayBuffer = await response.arrayBuffer(); // Convert to array buffer
+
+      const { data, error } = await supabase.storage
+        .from('images')
+        .upload(fileName, arrayBuffer, {
+          contentType: `image/${fileExt}`,
+          upsert: false,
+        });
+
+      if (error) throw error;
+
+      const { data: publicData } = supabase.storage.from('images').getPublicUrl(fileName);
+      setImageUrl(publicData.publicUrl);
+      showAlert('Success', 'Image uploaded!');
+    } catch (err: any) {
+      showAlert('Upload Error', err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
 
   const handlePost = async () => {
-    // Validation
-    if (!title.trim()) {
-      showAlert("Error", "Please enter an item title");
-      return;
-    }
-
-    if (!price.trim()) {
-      showAlert("Error", "Please enter a price");
-      return;
-    }
+    if (!title.trim()) return showAlert("Error", "Please enter a title.");
+    if (!price.trim()) return showAlert("Error", "Please enter a price.");
+    if (!imageUrl) return showAlert("Error", "Please upload an image first.");
 
     const priceNumber = parseFloat(price);
-    if (isNaN(priceNumber) || priceNumber <= 0) {
-      showAlert("Error", "Please enter a valid price");
-      return;
-    }
+    if (isNaN(priceNumber) || priceNumber <= 0) return showAlert("Error", "Invalid price.");
 
     try {
       setLoading(true);
       const token = await AsyncStorage.getItem("token");
-
-      console.log("=== Posting Listing ===");
-      console.log("Token exists:", !!token);
-
       if (!token) {
-        showAlert("Error", "You must be logged in to post items");
-        router.push('/');
+        showAlert("Error", "You must be logged in.");
+        router.push("/");
         return;
       }
 
@@ -74,52 +141,41 @@ export default function PostItemScreen() {
         title: title.trim(),
         description: description.trim() || null,
         price: priceNumber,
-        imageUrl: imageUrl.trim(),
+        imageUrl,
         category: category.trim() || null,
         location: location.trim() || null,
         user_id: await AsyncStorage.getItem("userID"),
       };
 
-      console.log("Sending request body:", JSON.stringify(requestBody, null, 2));
       const encoded = btoa(`user:password`);
-      const response = await fetch('https://hood-deals-3827cb9a0599.herokuapp.com/api/listings', {
-        method: 'POST',
-        headers: {
-          "Authorization": `Basic ${encoded}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(requestBody),
-      });
+      const response = await fetch(
+        "https://hood-deals-3827cb9a0599.herokuapp.com/api/listings",
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Basic ${encoded}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(requestBody),
+        }
+      );
 
-      console.log("Response status:", response.status);
-      
       const data = await response.json();
-      console.log("Response data:", data);
+      if (!response.ok) return showAlert("Error", data.error || "Listing failed.");
 
-      if (!response.ok) {
-        showAlert("Error", data.error || data.message || "Failed to create listing");
-        return;
-      }
+      showAlert("Success", "Your listing is live!");
 
-      // Success!
-      showAlert("Success", "Your item has been listed!");
-      
-      // Clear the form
-      setTitle('');
-      setPrice('');
-      setDescription('');
-      setImageUrl('');
-      setCategory('');
-      setLocation('');
+      setTitle("");
+      setPrice("");
+      setDescription("");
+      setCategory("");
+      setLocation("");
+      setLocalImage(null);
+      setImageUrl("");
 
-      // Navigate back to home
-      setTimeout(() => {
-        router.push('/home');
-      }, 1000);
-
-    } catch (error) {
-      console.error("Post item error:", error);
-      showAlert("Error", "Network error. Please check your connection and try again.");
+      router.push("/home");
+    } catch (err: any) {
+      showAlert("Error", err.message);
     } finally {
       setLoading(false);
     }
@@ -128,91 +184,148 @@ export default function PostItemScreen() {
   return (
     <SafeAreaView style={styles.safeArea}>
       <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        style={styles.container}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        style={{ flex: 1 }}
       >
         <ScrollView contentContainerStyle={styles.scroll}>
-          <View style={[styles.formContainer, { width: containerWidth }]}>
-            <Text style={styles.header}>List a New Item</Text>
-
-            <Text style={styles.label}>Title *</Text>
-            <TextInput
-              placeholder="What are you selling?"
-              placeholderTextColor="#888"
-              style={styles.input}
-              value={title}
-              onChangeText={setTitle}
-            />
-
-            <Text style={styles.label}>Price *</Text>
-            <View style={styles.priceContainer}>
-              <Text style={styles.dollarSign}>$</Text>
-              <TextInput
-                placeholder="0.00"
-                placeholderTextColor="#888"
-                style={[styles.input, styles.priceInput]}
-                keyboardType="decimal-pad"
-                value={price}
-                onChangeText={setPrice}
+          <View style={styles.formContainer}>
+            {/* Header */}
+            <View style={styles.header}>
+              <Image
+                source={require('../../assets/images/HOODDEALSLOGO3.webp')}
+                style={styles.logoImage}
               />
+              <Text style={styles.headerTitle}>List a New Item</Text>
+              <Text style={styles.headerSubtitle}>Share what you're selling with your neighborhood</Text>
             </View>
 
-            <Text style={styles.label}>Description</Text>
-            <TextInput
-              placeholder="Describe your item in detail..."
-              placeholderTextColor="#888"
-              multiline
-              style={[styles.input, styles.textArea]}
-              value={description}
-              onChangeText={setDescription}
-            />
+            {/* Form Card */}
+            <View style={styles.formCard}>
+              {/* Title Input */}
+              <View style={styles.inputContainer}>
+                <Text style={styles.label}>Title <Text style={styles.required}>*</Text></Text>
+                <TextInput
+                  placeholder="What are you selling?"
+                  placeholderTextColor="#999"
+                  style={styles.input}
+                  value={title}
+                  onChangeText={setTitle}
+                />
+              </View>
 
-            <Text style={styles.label}>Image URL</Text>
-            <TextInput
-              placeholder="https://example.com/image.jpg"
-              placeholderTextColor="#888"
-              style={styles.input}
-              value={imageUrl}
-              onChangeText={setImageUrl}
-              autoCapitalize="none"
-              keyboardType="url"
-            />
+              {/* Price Input */}
+              <View style={styles.inputContainer}>
+                <Text style={styles.label}>Price <Text style={styles.required}>*</Text></Text>
+                <View style={styles.priceInputContainer}>
+                  <Text style={styles.dollarSign}>$</Text>
+                  <TextInput
+                    placeholder="0.00"
+                    placeholderTextColor="#999"
+                    style={styles.priceInput}
+                    keyboardType="decimal-pad"
+                    value={price}
+                    onChangeText={setPrice}
+                  />
+                </View>
+              </View>
 
-            <Text style={styles.label}>Category</Text>
-            <TextInput
-              placeholder="e.g., Electronics, Furniture, Clothing"
-              placeholderTextColor="#888"
-              style={styles.input}
-              value={category}
-              onChangeText={setCategory}
-            />
+              {/* Category Selection */}
+              <View style={styles.inputContainer}>
+                <Text style={styles.label}>Category</Text>
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  style={styles.categoryScroll}
+                >
+                  {categoryOptions.map((cat) => (
+                    <TouchableOpacity
+                      key={cat}
+                      onPress={() => setCategory(cat)}
+                      style={[
+                        styles.categoryChip,
+                        category === cat && styles.categoryChipActive,
+                      ]}
+                      activeOpacity={0.7}
+                    >
+                      <Text
+                        style={[
+                          styles.categoryChipText,
+                          category === cat && styles.categoryChipTextActive,
+                        ]}
+                      >
+                        {cat}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
+              </View>
 
-            <Text style={styles.label}>Location</Text>
-            <TextInput
-              placeholder="Where is this item located?"
-              placeholderTextColor="#888"
-              style={styles.input}
-              value={location}
-              onChangeText={setLocation}
-            />
+              {/* Description Input */}
+              <View style={styles.inputContainer}>
+                <Text style={styles.label}>Description</Text>
+                <TextInput
+                  placeholder="Describe your item in detail..."
+                  placeholderTextColor="#999"
+                  multiline
+                  style={[styles.input, styles.textArea]}
+                  value={description}
+                  onChangeText={setDescription}
+                />
+                <Text style={styles.helperText}>
+                  Include details like condition, size, features, etc.
+                </Text>
+              </View>
 
-            <TouchableOpacity 
-              style={[styles.button, loading && styles.buttonDisabled]} 
-              onPress={handlePost}
-              disabled={loading}
-            >
-              <Text style={styles.buttonText}>
-                {loading ? 'Posting...' : 'Post Item'}
-              </Text>
-            </TouchableOpacity>
+              {/* PICK IMAGE */}
+              <TouchableOpacity style={styles.imageButton} onPress={handlePickImage}>
+                <Text style={styles.imageButtonText}>Add an Image</Text>
+              </TouchableOpacity>
+              {/* PREVIEW */}
+              {(localImage || imageUrl) && (
+                <Image
+                  source={{ uri: localImage || imageUrl }}
+                  style={{ width: "100%", height: 200, borderRadius: 12, marginBottom: 16 }}
+                  resizeMode="cover"
+                />
+              )}
 
-            <TouchableOpacity 
-              style={styles.cancelButton} 
-              onPress={() => router.back()}
-              disabled={loading}
-            >
-              <Text style={styles.cancelButtonText}>Cancel</Text>
-            </TouchableOpacity>
+              {/* Location Input */}
+              <View style={styles.inputContainer}>
+                <Text style={styles.label}>Location</Text>
+                <TextInput
+                  placeholder="Where is this item located?"
+                  placeholderTextColor="#999"
+                  style={styles.input}
+                  value={location}
+                  onChangeText={setLocation}
+                />
+                <Text style={styles.helperText}>
+                  Help buyers know where to pick up
+                </Text>
+              </View>
+
+              {/* Post Button */}
+              <TouchableOpacity
+                style={[styles.postButton, loading && styles.buttonDisabled]}
+                onPress={handlePost}
+                disabled={loading}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.postButtonText}>
+                  {loading ? 'Posting...' : 'Post Item'}
+                </Text>
+              </TouchableOpacity>
+
+              {/* Cancel Button */}
+              <TouchableOpacity
+                style={styles.cancelButton}
+                onPress={() => router.navigate('/(tabs)/home')}
+                disabled={loading}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.cancelButtonText}>Cancel</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -221,90 +334,123 @@ export default function PostItemScreen() {
 }
 
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: '#fff',
-  },
-  container: {
-    flex: 1,
-  },
-  scroll: {
-    flexGrow: 1,
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 40,
-  },
-  formContainer: {
-    width: '100%',
-    maxWidth: 600,
-  },
-  header: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    marginBottom: 30,
-    textAlign: 'center',
-    color: '#111',
-  },
-  label: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#111',
-    marginBottom: 8,
-    marginTop: 5,
-  },
+  safeArea: { flex: 1, backgroundColor: "#f7f8fa" },
+  scroll: { padding: 20 },
+  formContainer: { width: "100%", maxWidth: 600, alignSelf: "center" },
+  header: { alignItems: 'center', marginBottom: 32, },
+  imageButton: { backgroundColor: "#003366", padding: 14, borderRadius: 10, marginBottom: 16 },
+  imageButtonText: { color: "#fff", textAlign: "center", fontWeight: "600", fontSize: 16 },
   input: {
-    borderWidth: 1,
-    borderColor: '#ccc',
-    borderRadius: 10,
+    borderWidth: 1.5,
+    borderColor: "#dfe6e9",
+    borderRadius: 12,
     padding: 14,
     fontSize: 16,
-    backgroundColor: '#f9f9f9',
-    marginBottom: 20,
+    marginBottom: 12,
+    backgroundColor: "#fff",
+    color: "#2d3436",
   },
-  priceContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  dollarSign: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#111',
-    marginRight: 8,
+  categoryScroll: {
+    marginTop: 4,
   },
   priceInput: {
     flex: 1,
-    marginBottom: 0,
+    padding: 14,
+    paddingLeft: 0,
+    fontSize: 16,
+    color: '#2d3436',
+  },
+  headerTitle: {
+    fontSize: 28,
+    fontWeight: 'bold',
+    color: '#2d3436',
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  headerSubtitle: {
+    fontSize: 15,
+    color: '#636e72',
+    textAlign: 'center',
+    paddingHorizontal: 20,
+  },
+  formCard: {
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 24,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 4,
+  },
+  logoImage: {
+    width: 200,
+    height: 200,
+    marginBottom: 16,
+    borderRadius: 80,
+  },
+  buttonDisabled: {
+    opacity: 0.6,
+  },
+  helperText: {
+    fontSize: 12,
+    color: '#636e72',
+    marginTop: 6,
+    marginLeft: 4,
+  },
+  priceInputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1.5,
+    borderColor: '#dfe6e9',
+    borderRadius: 12,
+    backgroundColor: '#fff',
+    paddingLeft: 14,
+  },
+  dollarSign: {
+    fontSize: 20,
+    fontWeight: '600',
+    color: '#2d3436',
+    marginRight: 8,
   },
   textArea: {
     height: 120,
     textAlignVertical: 'top',
   },
-  button: {
-    backgroundColor: '#2e7bff',
-    paddingVertical: 16,
-    borderRadius: 10,
-    marginTop: 10,
+  required: {
+    color: '#dc2626',
   },
-  buttonDisabled: {
-    opacity: 0.6,
+  inputContainer: {
+    marginBottom: 24,
   },
-  buttonText: {
-    color: '#fff',
-    fontSize: 17,
+  label: {
+    fontSize: 14,
     fontWeight: '600',
-    textAlign: 'center',
+    color: '#2d3436',
+    marginBottom: 8,
+  },
+  postButton: { backgroundColor: "#003366", padding: 16, borderRadius: 12, marginTop: 12 },
+  categoryChip: { paddingVertical: 8, paddingHorizontal: 16, borderRadius: 20, marginRight: 10, backgroundColor: "#f0f3f7" },
+  categoryChipActive: { backgroundColor: "#003366" },
+  categoryChipText: { fontWeight: "600", color: "#636e72" },
+  categoryChipTextActive: { color: "#fff" },
+  postButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '700',
   },
   cancelButton: {
-    backgroundColor: '#f0f0f0',
+    backgroundColor: '#f0f3f7',
     paddingVertical: 16,
-    borderRadius: 10,
-    marginTop: 15,
+    borderRadius: 12,
+    marginTop: 12,
+    alignItems: 'center',
+    borderWidth: 1.5,
+    borderColor: '#e1e8ed',
   },
   cancelButtonText: {
-    color: '#666',
-    fontSize: 17,
+    color: '#636e72',
+    fontSize: 16,
     fontWeight: '600',
-    textAlign: 'center',
   },
 });

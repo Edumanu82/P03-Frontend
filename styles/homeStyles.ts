@@ -4,12 +4,12 @@ export const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: "#F9F9F9",
-    paddingTop: 20, // adds breathing room at the top
+    paddingTop: 20, 
   },
 
   container: {
     flex: 1,
-    backgroundColor: "#F9F9F9",
+    backgroundColor: "transparent",
     paddingHorizontal: 10,
   },
 
@@ -20,9 +20,9 @@ listContent: {
 },
 
 appTitle: {
-  fontSize: 26,
-  fontWeight: "700",
-  color: "#2e7bff",
+  fontSize: 50,
+  fontWeight: "bold",
+  color: "white",
   textAlign: "center",
   marginBottom: 20,
 },
@@ -33,7 +33,7 @@ appTitle: {
   },
 
   card: {
-    backgroundColor: "#fff",
+    backgroundColor: "rgba(255,255,255,0.90)",
     borderRadius: 12,
     padding: 10,
     shadowColor: "#000",
@@ -53,21 +53,22 @@ appTitle: {
   },
 
   title: {
-    fontSize: 16,
+    fontSize: 24,
     fontWeight: "600",
-    color: "#222",
+    color: "#000",
   },
 
   price: {
-    fontSize: 15,
-    fontWeight: "600",
+    fontSize: 20,
+    fontWeight: "bold",
     color: "#2E8B57", // green price
     marginTop: 2,
   },
 
   category: {
-    fontSize: 13,
-    color: "#777",
+    fontSize: 20,
+    fontWeight: "bold",
+    color: "#000",
     marginTop: 4,
   },
 });

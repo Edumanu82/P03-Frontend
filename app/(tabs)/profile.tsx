@@ -12,7 +12,7 @@ import {
   Text,
   TouchableOpacity,
   View,
-  useWindowDimensions,
+  useWindowDimensions
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -22,6 +22,8 @@ type Item = {
   price: string;
   description?: string;
   imageUrl?: string;
+  category?: string;
+  location?: string;
 };
 
 type StoredUser = { name?: string; email?: string; picture?: string } | null;
@@ -65,11 +67,10 @@ function ItemDetailModal({
 
   if (!item) return null;
 
-  // ✅ Delete listing handler
   const handleDelete = async () => {
     Alert.alert(
-      'Confirm Delete',
-      'Are you sure you want to delete this listing?',
+      'Delete Listing',
+      'Are you sure you want to delete this listing? This action cannot be undone.',
       [
         { text: 'Cancel', style: 'cancel' },
         {
@@ -81,9 +82,8 @@ function ItemDetailModal({
               const password = 'password';
               const authHeader = 'Basic ' + btoa(`${username}:${password}`);
 
-                const response = await fetch(
-                  `https://hood-deals-3827cb9a0599.herokuapp.com/api/listings/${item.id}`,
-
+              const response = await fetch(
+                `https://hood-deals-3827cb9a0599.herokuapp.com/api/listings/${item.id}`,
                 {
                   method: 'DELETE',
                   headers: {
@@ -94,16 +94,14 @@ function ItemDetailModal({
               );
 
               if (!response.ok) {
-                console.error('Failed to delete listing:', response.status);
                 Alert.alert('Error', `Failed to delete listing: ${response.status}`);
                 return;
               }
 
-              console.log('Listing deleted successfully');
+              Alert.alert('Success', 'Listing deleted successfully');
               onClose();
-              refreshListings(); // ✅ Refresh list after delete
+              refreshListings();
             } catch (err) {
-              console.error('Error deleting listing:', err);
               Alert.alert('Error', 'An error occurred while deleting the listing.');
             }
           },
@@ -113,29 +111,53 @@ function ItemDetailModal({
   };
 
   return (
-    <Modal visible={visible} animationType="fade" transparent onRequestClose={onClose}>
-      <Pressable style={styles.backdrop} onPress={onClose}>
-        <Pressable style={[styles.modalCard, { width: cardWidth }]} onPress={() => {}}>
+    <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
+      <Pressable style={styles.modalOverlay} onPress={onClose}>
+        <Pressable style={styles.modalContent} onPress={() => { }}>
           {item.imageUrl ? (
-            <Image source={{ uri: item.imageUrl }} style={styles.modalImage} resizeMode="contain" />
+            <Image source={{ uri: item.imageUrl }} style={styles.modalImage} resizeMode="cover" />
           ) : (
             <View style={[styles.modalImage, styles.modalImagePlaceholder]}>
-              <Text style={{ color: '#666' }}>No image</Text>
+              <Text style={styles.placeholderText}>No image</Text>
             </View>
           )}
 
-          <View style={{ gap: 6 }}>
+          <View style={styles.modalBody}>
             <Text style={styles.modalTitle}>{item.title}</Text>
             <Text style={styles.modalPrice}>{item.price}</Text>
-            {!!item.description && <Text style={styles.modalDescription}>{item.description}</Text>}
+
+            {item.category && (
+              <View style={styles.modalCategoryBadge}>
+                <Text style={styles.modalCategoryText}>{item.category}</Text>
+              </View>
+            )}
+
+            {item.location && (
+              <Text style={styles.modalLocation}>📍 {item.location}</Text>
+            )}
+
+            {item.description && (
+              <View style={styles.modalSection}>
+                <Text style={styles.modalSectionTitle}>Description</Text>
+                <Text style={styles.modalDescription}>{item.description}</Text>
+              </View>
+            )}
           </View>
 
           <View style={styles.modalActions}>
-            <TouchableOpacity style={[styles.actionBtn, styles.actionSecondary]} onPress={onClose}>
-              <Text style={styles.actionSecondaryText}>Close</Text>
+            <TouchableOpacity
+              style={styles.modalCloseButton}
+              onPress={onClose}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.modalCloseButtonText}>Close</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.deleteBtn} onPress={handleDelete}>
-              <Text style={styles.actionSecondaryText}>Delete listing</Text>
+            <TouchableOpacity
+              style={styles.modalDeleteButton}
+              onPress={handleDelete}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.modalDeleteButtonText}>Delete</Text>
             </TouchableOpacity>
           </View>
         </Pressable>
@@ -158,13 +180,11 @@ export default function ProfileScreen() {
     try {
       const u = await loadUserFromStorage();
       setUser(u);
-    } catch (e) {
-      console.error('Error loading user info:', e);
+    } catch {
       setUser(null);
     }
   }, []);
 
-  // ✅ Define fetchListings here so it’s accessible everywhere
   const fetchListings = async () => {
     try {
       if (!user?.name && !user?.email) return;
@@ -183,16 +203,8 @@ export default function ProfileScreen() {
         }
       );
 
-      if (!response.ok) {
-        console.error('Server error:', response.status);
-        return;
-      }
-
       const text = await response.text();
-      if (!text) {
-        console.warn('Empty response from server');
-        return;
-      }
+      if (!text) return;
 
       const data = JSON.parse(text);
 
@@ -207,12 +219,12 @@ export default function ProfileScreen() {
         price: `$${item.price}`,
         description: item.description,
         imageUrl: item.image_url,
+        category: item.category,
+        location: item.location,
       }));
 
       setUserItems(mapped);
-    } catch (err) {
-      console.error('Error fetching listings:', err);
-    }
+    } catch { }
   };
 
   useEffect(() => {
@@ -230,13 +242,22 @@ export default function ProfileScreen() {
   }, [user]);
 
   const handleLogout = async () => {
-    try {
-      await AsyncStorage.clear();
-      setUser(null);
-      router.replace('/');
-    } catch (error) {
-      console.error('Logout failed:', error);
-    }
+    Alert.alert(
+      'Log Out',
+      'Are you sure you want to log out?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Log Out',
+          style: 'destructive',
+          onPress: async () => {
+            await AsyncStorage.clear();
+            setUser(null);
+            router.replace('/');
+          },
+        },
+      ]
+    );
   };
 
   const onPressItem = (item: Item) => setSelectedItem(item);
@@ -244,7 +265,18 @@ export default function ProfileScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <View style={[styles.contentContainer, { width: containerWidth }]}>
+      <View style={[styles.container, { width: containerWidth }]}>
+
+        {/* Header with Logo */}
+        <View style={styles.header}>
+          <Image
+            source={require('../../assets/images/HOODDEALSLOGO3.webp')}
+            style={styles.logoImage}
+          />
+          <Text style={styles.headerTitle}>  Profile</Text>
+        </View>
+
+        {/* Profile Card */}
         <View style={styles.profileCard}>
           <Image
             source={
@@ -254,43 +286,86 @@ export default function ProfileScreen() {
             }
             style={styles.avatar}
           />
-          <View>
-            <Text style={styles.name}>{user?.name || 'Guest User'}</Text>
-            <Text style={styles.email}>{user?.email || 'No email available'}</Text>
+          <View style={styles.userInfo}>
+            <Text style={styles.userName}>{user?.name || 'Guest User'}</Text>
+            <Text style={styles.userEmail}>{user?.email || 'No email available'}</Text>
           </View>
         </View>
 
-        <View style={styles.section}>
+        {/* Stats Card */}
+        <View style={styles.statsCard}>
+          <View style={styles.statItem}>
+            <Text style={styles.statNumber}>{userItems.length}</Text>
+            <Text style={styles.statLabel}>Listings</Text>
+          </View>
+          <View style={styles.statDivider} />
+          <View style={styles.statItem}>
+            <Text style={styles.statNumber}>
+              ${userItems.reduce((sum, item) => {
+                const price = parseFloat(item.price.replace('$', ''));
+                return sum + (isNaN(price) ? 0 : price);
+              }, 0).toFixed(2)}
+            </Text>
+            <Text style={styles.statLabel}>Total Value</Text>
+          </View>
+        </View>
+
+        {/* Listings Section */}
+        <View style={styles.listingsSection}>
           <Text style={styles.sectionTitle}>My Listings</Text>
+
           {userItems.length > 0 ? (
             <FlatList
               data={userItems}
               keyExtractor={(item) => item.id}
-              contentContainerStyle={{ paddingBottom: 8 }}
+              showsVerticalScrollIndicator={false}
+              contentContainerStyle={styles.listContent}
               renderItem={({ item }) => (
-                <TouchableOpacity style={styles.listingCard} onPress={() => onPressItem(item)}>
-                  <View>
-                    <Text style={styles.itemTitle}>{item.title}</Text>
-                    {!!item.description && (
-                      <Text numberOfLines={1} style={styles.itemSubtitle}>
+                <TouchableOpacity
+                  style={styles.listingCard}
+                  onPress={() => onPressItem(item)}
+                  activeOpacity={0.7}
+                >
+                  {item.imageUrl ? (
+                    <Image
+                      source={{ uri: item.imageUrl }}
+                      style={styles.listingImage}
+                    />
+                  ) : (
+                    <View style={[styles.listingImage, styles.listingImagePlaceholder]}>
+                      <Text style={styles.placeholderText}>No image</Text>
+                    </View>
+                  )}
+                  <View style={styles.listingInfo}>
+                    <Text style={styles.listingTitle} numberOfLines={1}>
+                      {item.title}
+                    </Text>
+                    {item.description && (
+                      <Text style={styles.listingDescription} numberOfLines={2}>
                         {item.description}
                       </Text>
                     )}
+                    <Text style={styles.listingPrice}>{item.price}</Text>
                   </View>
-                  <Text style={styles.itemPrice}>{item.price}</Text>
                 </TouchableOpacity>
               )}
             />
           ) : (
-            <Text style={{ textAlign: 'center', color: '#777', marginTop: 10 }}>No listings yet.</Text>
+            <View style={styles.emptyState}>
+              <Text style={styles.emptyStateText}>No listings yet</Text>
+              <Text style={styles.emptyStateSubtext}>
+                Start selling items in your neighborhood
+              </Text>
+            </View>
           )}
         </View>
 
-        <TouchableOpacity style={styles.editButton}>
-          <Text style={styles.editButtonText}>Edit Profile</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
+        {/* Logout Button */}
+        <TouchableOpacity
+          style={styles.logoutButton}
+          onPress={handleLogout}
+          activeOpacity={0.8}
+        >
           <Text style={styles.logoutButtonText}>Log Out</Text>
         </TouchableOpacity>
       </View>
@@ -306,108 +381,311 @@ export default function ProfileScreen() {
 }
 
 const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: '#f5f5f5', alignItems: 'center' },
-  contentContainer: { flex: 1, width: '100%', maxWidth: 700, paddingHorizontal: 20 },
+  safeArea: {
+    flex: 1,
+    backgroundColor: '#f7f8fa',
+    alignItems: 'center',
+  },
+  container: {
+    flex: 1,
+    width: '100%',
+    maxWidth: 700,
+    paddingHorizontal: 20,
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 16,
+  },
+  logoCircle: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#003366',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  logoText: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#fff',
+  },
+  headerTitle: {
+    fontSize: 28,
+    fontWeight: 'bold',
+    color: '#2d3436',
+  },
   profileCard: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#fff',
     padding: 20,
-    borderRadius: 12,
-    marginTop: 20,
-    marginBottom: 25,
+    borderRadius: 16,
+    marginBottom: 16,
     shadowColor: '#000',
-    shadowOpacity: 0.1,
-    shadowRadius: 5,
-    elevation: 3,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 4,
   },
-  avatar: { width: 70, height: 70, borderRadius: 35, marginRight: 15 },
-  name: { fontSize: 22, fontWeight: 'bold', color: '#111' },
-  email: { fontSize: 15, color: '#555' },
-  section: { flex: 1 },
-  sectionTitle: { fontSize: 18, fontWeight: '600', marginBottom: 12, color: '#333' },
-  listingCard: {
-    backgroundColor: '#fff',
-    padding: 14,
-    borderRadius: 10,
-    marginBottom: 10,
+  avatar: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    marginRight: 16,
+    backgroundColor: '#f0f3f7',
+  },
+  userInfo: {
+    flex: 1,
+  },
+  userName: {
+    fontSize: 22,
+    fontWeight: 'bold',
+    color: '#2d3436',
+    marginBottom: 4,
+  },
+  userEmail: {
+    fontSize: 15,
+    color: '#636e72',
+  },
+  statsCard: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    gap: 12,
-    alignItems: 'center',
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 20,
+    marginBottom: 20,
     shadowColor: '#000',
-    shadowOpacity: 0.05,
-    shadowRadius: 3,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 4,
+  },
+  statItem: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  statNumber: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#003366',
+    marginBottom: 4,
+  },
+  statLabel: {
+    fontSize: 13,
+    color: '#636e72',
+    fontWeight: '500',
+  },
+  statDivider: {
+    width: 1,
+    backgroundColor: '#e1e8ed',
+    marginHorizontal: 20,
+  },
+  listingsSection: {
+    flex: 1,
+    marginBottom: 16,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#2d3436',
+    marginBottom: 12,
+  },
+  listContent: {
+    paddingBottom: 20,
+  },
+  listingCard: {
+    flexDirection: 'row',
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    marginBottom: 12,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
     elevation: 2,
   },
-  itemTitle: { fontSize: 16, color: '#222', fontWeight: '600' },
-  itemSubtitle: { fontSize: 13, color: '#666', marginTop: 2, maxWidth: 220 },
-  itemPrice: { fontWeight: 'bold', color: '#008000' },
-  editButton: {
-    backgroundColor: '#2e7bff',
-    paddingVertical: 14,
-    borderRadius: 10,
-    alignItems: 'center',
-    marginTop: 10,
+  listingImage: {
+    width: 100,
+    height: 100,
+    backgroundColor: '#f0f3f7',
   },
-  editButtonText: { color: '#fff', fontSize: 16, fontWeight: '600' },
-  logoutButton: {
-    backgroundColor: '#ff4d4d',
-    paddingVertical: 14,
-    borderRadius: 10,
-    alignItems: 'center',
-    marginTop: 12,
-    marginBottom: 25,
-  },
-  logoutButtonText: { color: '#fff', fontSize: 16, fontWeight: '600' },
-  backdrop: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.35)',
+  listingImagePlaceholder: {
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 20,
   },
-  modalCard: {
+  listingInfo: {
+    flex: 1,
+    padding: 12,
+    justifyContent: 'space-between',
+  },
+  listingTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#2d3436',
+    marginBottom: 4,
+  },
+  listingDescription: {
+    fontSize: 13,
+    color: '#636e72',
+    lineHeight: 18,
+  },
+  listingPrice: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#003366',
+    marginTop: 4,
+  },
+  emptyState: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 60,
+  },
+  emptyStateText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#636e72',
+    marginBottom: 8,
+  },
+  emptyStateSubtext: {
+    fontSize: 14,
+    color: '#b2bec3',
+  },
+  logoutButton: {
+    backgroundColor: '#dc2626',
+    paddingVertical: 16,
+    borderRadius: 12,
+    marginBottom: 20,
+    shadowColor: '#dc2626',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  logoutButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '700',
+    textAlign: 'center',
+  },
+  modalOverlay: {
+    flex: 1,
+    justifyContent: 'flex-end',
+    backgroundColor: 'rgba(0,0,0,0.5)',
+  },
+  modalContent: {
     backgroundColor: '#fff',
-    borderRadius: 14,
-    padding: 16,
-    gap: 12,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    maxHeight: '90%',
     shadowColor: '#000',
-    shadowOpacity: 0.2,
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.1,
     shadowRadius: 12,
     elevation: 8,
   },
   modalImage: {
     width: '100%',
-    height: 220,
-    borderRadius: 10,
-    marginBottom: 4,
+    height: 300,
+    backgroundColor: '#f0f3f7',
   },
   modalImagePlaceholder: {
-    backgroundColor: '#f1f1f1',
     justifyContent: 'center',
     alignItems: 'center',
   },
-  modalTitle: { fontSize: 18, fontWeight: '700', color: '#111' },
-  modalPrice: { fontSize: 16, fontWeight: '700', color: '#0a930a' },
-  modalDescription: { fontSize: 14, color: '#333', lineHeight: 20 },
+  placeholderText: {
+    color: '#b2bec3',
+    fontSize: 14,
+  },
+  modalBody: {
+    padding: 20,
+  },
+  modalTitle: {
+    fontSize: 22,
+    fontWeight: '700',
+    color: '#2d3436',
+    marginBottom: 8,
+  },
+  modalPrice: {
+    fontSize: 28,
+    fontWeight: '700',
+    color: '#003366',
+    marginBottom: 12,
+  },
+  modalCategoryBadge: {
+    alignSelf: 'flex-start',
+    backgroundColor: '#f0f3f7',
+    paddingVertical: 6,
+    paddingHorizontal: 14,
+    borderRadius: 16,
+    marginBottom: 12,
+  },
+  modalCategoryText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#636e72',
+  },
+  modalLocation: {
+    fontSize: 14,
+    color: '#636e72',
+    marginBottom: 16,
+  },
+  modalSection: {
+    marginTop: 8,
+  },
+  modalSectionTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#2d3436',
+    marginBottom: 8,
+  },
+  modalDescription: {
+    fontSize: 15,
+    color: '#636e72',
+    lineHeight: 22,
+  },
   modalActions: {
-    marginTop: 6,
     flexDirection: 'row',
-    justifyContent: 'flex-end',
-    gap: 10,
+    paddingHorizontal: 20,
+    paddingBottom: 20,
+    gap: 12,
   },
-  actionBtn: {
-    paddingVertical: 10,
-    paddingHorizontal: 14,
-    borderRadius: 10,
+  modalCloseButton: {
+    flex: 1,
+    backgroundColor: '#f0f3f7',
+    paddingVertical: 16,
+    borderRadius: 12,
+    alignItems: 'center',
+    borderWidth: 1.5,
+    borderColor: '#e1e8ed',
   },
-  deleteBtn: {
-    paddingVertical: 10,
-    paddingHorizontal: 14,
-    borderRadius: 10,
-    backgroundColor: '#ff4d4d',
+  modalCloseButtonText: {
+    color: '#636e72',
+    fontWeight: '700',
+    fontSize: 16,
   },
-  actionSecondary: { backgroundColor: '#efefef' },
-  actionSecondaryText: { color: '#333', fontWeight: '700' },
+  modalDeleteButton: {
+    flex: 1,
+    backgroundColor: '#dc2626',
+    paddingVertical: 16,
+    borderRadius: 12,
+    alignItems: 'center',
+    shadowColor: '#dc2626',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  modalDeleteButtonText: {
+    color: '#fff',
+    fontWeight: '700',
+    fontSize: 16,
+  },
+  logoImage: {
+    width: 80,
+    height: 80,
+    marginBottom: 16,
+    borderRadius: 40,
+  },
 });
