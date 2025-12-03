@@ -142,6 +142,19 @@ export default function LoginScreen() {
             await AsyncStorage.setItem("token", data.token);
             await AsyncStorage.setItem("username", JSON.stringify(data.user));
             await AsyncStorage.setItem("userID", data.user.id.toString());
+              // 👇 Save one unified object for the inbox page
+            await AsyncStorage.setItem(
+              "authUser",
+              JSON.stringify({
+                name: data.user.name,
+                email: data.user.email,
+                picture: data.user.picture,
+                accessToken: data.token,   // <- backend JWT or Google token
+              })
+            );
+            const saved = await AsyncStorage.getItem("authUser");
+            console.log("Saved authUser:", saved);
+
 
             setUserInfo(data.user);
             await WebBrowser.dismissBrowser();
