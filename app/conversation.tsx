@@ -1,3 +1,4 @@
+// app/(tabs)/conversation.tsx
 import { useLocalSearchParams } from "expo-router";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
@@ -12,14 +13,36 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+
 import type { Message } from "@/types/chat";
 import { listMessages, sendMessage } from "@/api/chat";
 
-export default function ConversationScreen() {
+const BASE_URL = "https://hood-deals-3827cb9a0599.herokuapp.com";
+const BASIC_AUTH = "Basic " + btoa("user:password");
+
+// just like Inbox: try multiple keys for the stored user
+const STORAGE_KEYS_TO_TRY = ["user", "authUser", "profile", "googleAuth"];
+
+async function loadStoredUserEmail(): Promise<string | null> {
+  for (const key of STORAGE_KEYS_TO_TRY) {
+    const raw = await AsyncStorage.getItem(key);
+    if (!raw) continue;
+    try {
+      const parsed = JSON.parse(raw);
+      if (parsed?.email) return parsed.email;
+      if (parsed?.user?.email) return parsed.user.email;
+    } catch {
+      // if it's just a string, ignore
+    }
+  }
+  return null;
+}
+
+function ConversationScreen() {
   const params = useLocalSearchParams();
   const conversationId = Number(params.conversationId);
 
-  // ✅ Get the current user from backend (/me)
   const [myUserId, setMyUserId] = useState<number | null>(null);
   const [otherUserId, setOtherUserId] = useState<number | null>(null);
 
@@ -33,19 +56,43 @@ export default function ConversationScreen() {
   const [draft, setDraft] = useState("");
   const listRef = useRef<FlatList<Message>>(null);
 
-  // 🔹 Fetch logged-in user ID
+  // 🔹 Get my numeric userId from backend using stored email
   useEffect(() => {
     (async () => {
       try {
-        const res = await fetch("http://10.0.2.2:8080/me", {
+        const email = await loadStoredUserEmail();
+        if (!email) {
+          setError("No stored user email – please sign in again.");
+          setLoading(false);
+          return;
+        }
+
+        const url = `${BASE_URL}/api/user/by-email?email=${encodeURIComponent(
+          email
+        )}`;
+        console.log("GET current user:", url);
+
+        const res = await fetch(url, {
           headers: {
-            Authorization: "Basic " + btoa("user:password"),
+            Authorization: BASIC_AUTH,
+            "Content-Type": "application/json",
           },
         });
+
+        if (!res.ok) {
+          const txt = await res.text();
+          console.log("/by-email error:", res.status, txt);
+          throw new Error(`Failed to fetch user: ${res.status}`);
+        }
+
         const me = await res.json();
+        console.log("Current user:", me);
         setMyUserId(me.id);
-      } catch (err) {
+      } catch (err: any) {
         console.error("Failed to fetch current user:", err);
+        setError(`Failed to fetch current user: ${err.message ?? err}`);
+      } finally {
+        setLoading(false);
       }
     })();
   }, []);
@@ -53,12 +100,15 @@ export default function ConversationScreen() {
   const loadPage = useCallback(
     async (pageToLoad: number, reset = false) => {
       try {
+        setError(null);
         const res = await listMessages(conversationId, pageToLoad, size);
         setHasMore(!res.last);
-        setMessages((prev) => (reset ? res.content : [...prev, ...res.content]));
+        setMessages((prev) =>
+          reset ? res.content : [...prev, ...res.content]
+        );
         setPage(res.number);
 
-        // derive the other user's ID from first message
+        // figure out the other user from first message, once
         if (!otherUserId && myUserId && res.content.length > 0) {
           const sample = res.content[0];
           const derived =
@@ -68,6 +118,7 @@ export default function ConversationScreen() {
           setOtherUserId(derived);
         }
       } catch (e: any) {
+        console.error("Failed to load messages:", e);
         setError(e.message ?? "Failed to load messages");
       } finally {
         setLoading(false);
@@ -77,11 +128,13 @@ export default function ConversationScreen() {
     [conversationId, size, myUserId, otherUserId]
   );
 
+  // load messages once we know who I am
   useEffect(() => {
     if (myUserId) {
+      setLoading(true);
       loadPage(0, true);
     }
-  }, [myUserId]);
+  }, [myUserId, loadPage]);
 
   const onRefresh = useCallback(() => {
     setRefreshing(true);
@@ -109,6 +162,7 @@ export default function ConversationScreen() {
         listRef.current?.scrollToEnd({ animated: true })
       );
     } catch (e: any) {
+      console.error("Failed to send message:", e);
       setError(e.message ?? "Failed to send message");
     }
   }, [conversationId, draft, myUserId, otherUserId]);
@@ -145,6 +199,7 @@ export default function ConversationScreen() {
         style={styles.container}
       >
         {error ? <Text style={styles.error}>{error}</Text> : null}
+
         <FlatList
           ref={listRef}
           data={messages}
@@ -174,6 +229,8 @@ export default function ConversationScreen() {
     </SafeAreaView>
   );
 }
+
+export default ConversationScreen; // 👈 THIS fixes the “missing default export” warning
 
 const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: "#fff" },
