@@ -1,5 +1,6 @@
 import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import { router } from "expo-router";
 import React, { useState } from "react";
 import {
   FlatList,
@@ -38,12 +39,14 @@ type Listing = {
   location?: string;
 };
 
+
 export default function HomeScreen() {
   const [listings, setListings] = useState<Listing[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedListing, setSelectedListing] = useState<Listing | null>(null);
   const [modalVisible, setModalVisible] = useState(false);
+  const [msgModalVisible, setMsgModalVisible] = useState(false);
 
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [selectedPriceRange, setSelectedPriceRange] = useState("All");
@@ -60,6 +63,16 @@ export default function HomeScreen() {
     "$500 - $1000",
     "Above $1000",
   ];
+
+  function onPressMessage(Listing: Listing) {
+    console.log("Message button pressed");
+    router.push({
+      pathname: "../newMessage",
+      params: { userId: Listing.user_id, userName: Listing.userName, pfp: Listing.userPicture }
+    });
+    // Implement navigation to conversation screen if needed
+    setModalVisible(false);
+  }
 
   useFocusEffect(
     React.useCallback(() => {
@@ -347,6 +360,13 @@ export default function HomeScreen() {
                               {selectedListing.userName}
                             </Text>
                           </View>
+                          <TouchableOpacity 
+                            style={styles.modalMessageButton} 
+                            activeOpacity={0.8}
+                            onPress={() => onPressMessage(selectedListing)}
+                          >
+                              <Text style={styles.modalCloseButtonText}>Message</Text>
+                          </TouchableOpacity>
                         </View>
                       )}
                     </View>
@@ -633,6 +653,19 @@ const styles = StyleSheet.create({
   },
   modalCloseButton: {
     backgroundColor: "#003366",
+    marginHorizontal: 20,
+    marginVertical: 20,
+    paddingVertical: 16,
+    borderRadius: 12,
+    alignItems: "center",
+    shadowColor: "#003366",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  modalMessageButton: {
+    backgroundColor: "#00c23dff",
     marginHorizontal: 20,
     marginVertical: 20,
     paddingVertical: 16,
