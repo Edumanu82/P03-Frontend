@@ -13,6 +13,8 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { createConversation } from "@/api/chat";
 
 type RootStackParamList = {
   home: undefined;
@@ -39,6 +41,26 @@ type Listing = {
   location?: string;
 };
 
+const STORAGE_KEYS_TO_TRY = ["user", "authUser", "profile", "googleAuth"];
+const BASE_URL = "https://hood-deals-3827cb9a0599.herokuapp.com";
+const BASIC_AUTH = "Basic " + btoa("user:password");
+
+async function loadUserFromStorage() {
+  for (const key of STORAGE_KEYS_TO_TRY) {
+    const raw = await AsyncStorage.getItem(key);
+    if (!raw) continue;
+    try {
+      const parsed = JSON.parse(raw);
+      if (parsed && (parsed.name || parsed.email || parsed.picture || parsed.accessToken))
+        return parsed;
+      if (parsed?.user && (parsed.user.name || parsed.user.email || parsed.user.picture))
+        return parsed.user;
+    } catch {
+      return { name: raw };
+    }
+  }
+  return null;
+}
 
 export default function HomeScreen() {
   const [listings, setListings] = useState<Listing[]>([]);
@@ -46,7 +68,6 @@ export default function HomeScreen() {
   const [error, setError] = useState<string | null>(null);
   const [selectedListing, setSelectedListing] = useState<Listing | null>(null);
   const [modalVisible, setModalVisible] = useState(false);
-  const [msgModalVisible, setMsgModalVisible] = useState(false);
 
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [selectedPriceRange, setSelectedPriceRange] = useState("All");
@@ -64,14 +85,60 @@ export default function HomeScreen() {
     "Above $1000",
   ];
 
-  function onPressMessage(Listing: Listing) {
-    console.log("Message button pressed");
-    router.push({
-      pathname: "../newMessage",
-      params: { userId: Listing.user_id, userName: Listing.userName, pfp: Listing.userPicture }
-    });
-    // Implement navigation to conversation screen if needed
-    setModalVisible(false);
+  //  Message button: create conversation and open chat
+  async function onPressMessage(listing: Listing) {
+    try {
+      console.log("Message button pressed for listing:", listing.id);
+
+      // 1️⃣ Figure out who *you* are (myUserId) via email from storage
+      const stored = await loadUserFromStorage();
+      if (!stored?.email) {
+        console.log("No stored email, cannot start conversation");
+        return;
+      }
+
+      const meUrl = `${BASE_URL}/api/user/by-email?email=${encodeURIComponent(
+        stored.email
+      )}`;
+      console.log("GET current user:", meUrl);
+
+      const meRes = await fetch(meUrl, {
+        headers: {
+          Authorization: BASIC_AUTH,
+          "Content-Type": "application/json",
+        },
+      });
+
+      if (!meRes.ok) {
+        const body = await meRes.text();
+        console.log("Error fetching current user in HomeScreen:", meRes.status, body);
+        return;
+      }
+
+      const me = await meRes.json();
+      const myUserId = me.id as number;
+      console.log("Resolved myUserId:", myUserId);
+
+      //  Seller is the owner of the listing
+      const otherUserId = listing.user_id;
+
+      // Create or reuse conversation
+      const convo = await createConversation(myUserId, otherUserId, listing.id);
+      console.log("Conversation created/loaded from HomeScreen:", convo);
+
+      //  Close modal and open conversation screen
+      setModalVisible(false);
+
+      router.push({
+        pathname: "../conversation",
+        params: {
+          conversationId: String(convo.id),
+          otherUserId: String(otherUserId), // 👈 crucial so ConversationScreen knows the receiver
+        },
+      });
+    } catch (err) {
+      console.error("Failed to start conversation from HomeScreen:", err);
+    }
   }
 
   useFocusEffect(
@@ -391,6 +458,7 @@ export default function HomeScreen() {
 }
 
 const styles = StyleSheet.create({
+  // ... your styles exactly as before ...
   safeArea: {
     flex: 1,
     backgroundColor: "#f7f8fa",
@@ -430,19 +498,11 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
   },
-  logoCircle: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: "#003366",
-    justifyContent: "center",
-    alignItems: "center",
-    marginRight: 12,
-  },
-  logoText: {
-    fontSize: 18,
-    fontWeight: "bold",
-    color: "#fff",
+  logoImage: {
+    width: 80,
+    height: 80,
+    marginBottom: 16,
+    borderRadius: 40,
   },
   appTitle: {
     fontSize: 28,
@@ -554,12 +614,6 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "flex-end",
     backgroundColor: "rgba(0,0,0,0.5)",
-  },
-  logoImage: {
-    width: 80,
-    height: 80,
-    marginBottom: 16,
-    borderRadius: 40,
   },
   modalContent: {
     backgroundColor: "#fff",
