@@ -1,4 +1,3 @@
-// app/(tabs)/conversation.tsx
 import { useLocalSearchParams } from "expo-router";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
@@ -11,6 +10,7 @@ import {
   TextInput,
   TouchableOpacity,
   View,
+  Alert,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -18,33 +18,44 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import type { Message } from "@/types/chat";
 import { listMessages, sendMessage } from "@/api/chat";
 
-const BASE_URL = "https://hood-deals-3827cb9a0599.herokuapp.com";
-const BASIC_AUTH = "Basic " + btoa("user:password");
+type Params = {
+  conversationId?: string;
+  otherUserId?: string;
+};
 
-// just like Inbox: try multiple keys for the stored user
 const STORAGE_KEYS_TO_TRY = ["user", "authUser", "profile", "googleAuth"];
 
-async function loadStoredUserEmail(): Promise<string | null> {
+async function loadUserFromStorage() {
   for (const key of STORAGE_KEYS_TO_TRY) {
     const raw = await AsyncStorage.getItem(key);
     if (!raw) continue;
     try {
       const parsed = JSON.parse(raw);
-      if (parsed?.email) return parsed.email;
-      if (parsed?.user?.email) return parsed.user.email;
+      if (parsed && (parsed.name || parsed.email || parsed.picture || parsed.accessToken))
+        return parsed;
+      if (parsed?.user && (parsed.user.name || parsed.user.email || parsed.user.picture))
+        return parsed.user;
     } catch {
-      // if it's just a string, ignore
+      return { name: raw };
     }
   }
   return null;
 }
 
-function ConversationScreen() {
-  const params = useLocalSearchParams();
+const BASIC_AUTH = "Basic " + btoa("user:password");
+const BASE_URL = "https://hood-deals-3827cb9a0599.herokuapp.com";
+
+export default function ConversationScreen() {
+  const params = useLocalSearchParams<Params>();
   const conversationId = Number(params.conversationId);
+  const initialOtherUserId = params.otherUserId
+    ? Number(params.otherUserId)
+    : null;
 
   const [myUserId, setMyUserId] = useState<number | null>(null);
-  const [otherUserId, setOtherUserId] = useState<number | null>(null);
+  const [otherUserId, setOtherUserId] = useState<number | null>(
+    initialOtherUserId
+  );
 
   const [page, setPage] = useState(0);
   const [size] = useState(20);
@@ -56,19 +67,25 @@ function ConversationScreen() {
   const [draft, setDraft] = useState("");
   const listRef = useRef<FlatList<Message>>(null);
 
-  // 🔹 Get my numeric userId from backend using stored email
+  // Keep otherUserId in sync with params if they change
+  useEffect(() => {
+    if (initialOtherUserId && !otherUserId) {
+      setOtherUserId(initialOtherUserId);
+    }
+  }, [initialOtherUserId, otherUserId]);
+
+  //  Fetch logged-in user via /api/user/by-email
   useEffect(() => {
     (async () => {
       try {
-        const email = await loadStoredUserEmail();
-        if (!email) {
-          setError("No stored user email – please sign in again.");
-          setLoading(false);
+        const stored = await loadUserFromStorage();
+        if (!stored?.email) {
+          console.log("No stored email, cannot resolve user");
           return;
         }
 
         const url = `${BASE_URL}/api/user/by-email?email=${encodeURIComponent(
-          email
+          stored.email
         )}`;
         console.log("GET current user:", url);
 
@@ -80,19 +97,16 @@ function ConversationScreen() {
         });
 
         if (!res.ok) {
-          const txt = await res.text();
-          console.log("/by-email error:", res.status, txt);
-          throw new Error(`Failed to fetch user: ${res.status}`);
+          const body = await res.text();
+          console.log("Error fetching current user:", res.status, body);
+          return;
         }
 
         const me = await res.json();
         console.log("Current user:", me);
         setMyUserId(me.id);
-      } catch (err: any) {
+      } catch (err) {
         console.error("Failed to fetch current user:", err);
-        setError(`Failed to fetch current user: ${err.message ?? err}`);
-      } finally {
-        setLoading(false);
       }
     })();
   }, []);
@@ -101,16 +115,14 @@ function ConversationScreen() {
     async (pageToLoad: number, reset = false) => {
       try {
         setError(null);
-        const res = await listMessages(conversationId, pageToLoad, size);
-        setHasMore(!res.last);
-        setMessages((prev) =>
-          reset ? res.content : [...prev, ...res.content]
-        );
-        setPage(res.number);
+        const r = await listMessages(conversationId, pageToLoad, size);
+        setHasMore(!r.last);
+        setMessages((prev) => (reset ? r.content : [...prev, ...r.content]));
+        setPage(r.number);
 
-        // figure out the other user from first message, once
-        if (!otherUserId && myUserId && res.content.length > 0) {
-          const sample = res.content[0];
+        // If we didn't get otherUserId from params, try to derive from messages
+        if (!otherUserId && myUserId && r.content.length > 0) {
+          const sample = r.content[0];
           const derived =
             sample.senderId === myUserId
               ? sample.receiverId
@@ -118,7 +130,7 @@ function ConversationScreen() {
           setOtherUserId(derived);
         }
       } catch (e: any) {
-        console.error("Failed to load messages:", e);
+        console.log("listMessages error body:", e);
         setError(e.message ?? "Failed to load messages");
       } finally {
         setLoading(false);
@@ -128,13 +140,13 @@ function ConversationScreen() {
     [conversationId, size, myUserId, otherUserId]
   );
 
-  // load messages once we know who I am
+  // Initial load once we know who we are
   useEffect(() => {
-    if (myUserId) {
+    if (myUserId && conversationId) {
       setLoading(true);
       loadPage(0, true);
     }
-  }, [myUserId, loadPage]);
+  }, [myUserId, conversationId, loadPage]);
 
   const onRefresh = useCallback(() => {
     setRefreshing(true);
@@ -148,16 +160,32 @@ function ConversationScreen() {
 
   const send = useCallback(async () => {
     const content = draft.trim();
-    if (!content || !myUserId || !otherUserId) return;
+    if (!content) return;
+    if (!myUserId) {
+      Alert.alert("Error", "Could not determine your user id.");
+      return;
+    }
+
+   
+    let receiverId = otherUserId;
+
+    if (!receiverId && messages.length > 0) {
+      const sample = messages[0];
+      receiverId =
+        sample.senderId === myUserId ? sample.receiverId : sample.senderId;
+      setOtherUserId(receiverId);
+    }
+
+    if (!receiverId) {
+      Alert.alert("Error", "Could not determine who you are messaging.");
+      return;
+    }
+
     setDraft("");
     try {
-      const msg = await sendMessage(
-        conversationId,
-        myUserId,
-        otherUserId,
-        content
-      );
+      const msg = await sendMessage(conversationId, myUserId, receiverId, content);
       setMessages((prev) => [...prev, msg]);
+
       requestAnimationFrame(() =>
         listRef.current?.scrollToEnd({ animated: true })
       );
@@ -165,11 +193,11 @@ function ConversationScreen() {
       console.error("Failed to send message:", e);
       setError(e.message ?? "Failed to send message");
     }
-  }, [conversationId, draft, myUserId, otherUserId]);
+  }, [conversationId, draft, myUserId, otherUserId, messages]);
 
   const renderItem = useCallback(
     ({ item }: { item: Message }) => {
-      const mine = item.senderId === myUserId;
+      const mine = myUserId != null && item.senderId === myUserId;
       return (
         <View style={[styles.bubble, mine ? styles.mine : styles.theirs]}>
           <Text style={styles.content}>{item.content}</Text>
@@ -199,7 +227,6 @@ function ConversationScreen() {
         style={styles.container}
       >
         {error ? <Text style={styles.error}>{error}</Text> : null}
-
         <FlatList
           ref={listRef}
           data={messages}
@@ -229,8 +256,6 @@ function ConversationScreen() {
     </SafeAreaView>
   );
 }
-
-export default ConversationScreen; // 👈 THIS fixes the “missing default export” warning
 
 const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: "#fff" },
