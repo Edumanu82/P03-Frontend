@@ -26,7 +26,7 @@ type Item = {
   location?: string;
 };
 
-type StoredUser = { name?: string; email?: string; picture?: string } | null;
+type StoredUser = {  id?: string; name?: string; email?: string; picture?: string } | null;
 
 const STORAGE_KEYS_TO_TRY = ['user', 'username', 'profile', 'authUser'];
 
@@ -37,8 +37,8 @@ async function loadUserFromStorage(): Promise<StoredUser> {
 
     try {
       const parsed = JSON.parse(raw);
-      if (parsed && (parsed.name || parsed.email || parsed.picture)) return parsed;
-      if (parsed?.user && (parsed.user.name || parsed.user.email || parsed.user.picture)) return parsed.user;
+      if (parsed && (parsed.id || parsed.name || parsed.email || parsed.picture)) return parsed;
+      if (parsed?.user && (parsed.id || parsed.user.name || parsed.user.email || parsed.user.picture)) return parsed.user;
     } catch {
       return { name: raw };
     }
@@ -187,7 +187,7 @@ export default function ProfileScreen() {
 
   const fetchListings = async () => {
     try {
-      if (!user?.name && !user?.email) return;
+      if (!user?.id) return;
 
       const username = 'user';
       const password = 'password';
@@ -209,9 +209,8 @@ export default function ProfileScreen() {
       const data = JSON.parse(text);
 
       const filtered = data.filter(
-        (item: any) =>
-          item.userName?.toLowerCase() === user?.name?.toLowerCase()
-      );
+        (item: any) => item.user_id?.toString() === user?.id?.toString()
+      );      
 
       const mapped = filtered.map((item: any) => ({
         id: item.id.toString(),

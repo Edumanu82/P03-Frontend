@@ -49,54 +49,66 @@ export default function InboxPage() {
     return isLarge ? Math.min(max, width * 0.6) : Math.min(520, width * 0.9);
   }, [isLarge, width]);
 
-  // 🔹 Load backend user & id from AsyncStorage once
-  useEffect(() => {
-    (async () => {
-      try {
-        const rawUser = await AsyncStorage.getItem(USER_STORAGE_KEY);
-        const rawUserId = await AsyncStorage.getItem("userID");
+  // Load backend user & id from AsyncStorage - runs on every focus to catch account switches
+  const loadUserFromStorage = useCallback(async () => {
+    try {
+      const rawUser = await AsyncStorage.getItem(USER_STORAGE_KEY);
+      const rawUserId = await AsyncStorage.getItem("userID");
 
-        if (!rawUser || !rawUserId) {
-          setError("No logged-in user. Please sign in again.");
-          setLoading(false);
-          return;
-        }
-
-        const parsedUser: BackendUser = JSON.parse(rawUser);
-        const parsedId = Number(rawUserId);
-
-        if (!parsedUser || !parsedUser.email || isNaN(parsedId)) {
-          setError("Stored user is invalid. Please sign in again.");
-          setLoading(false);
-          return;
-        }
-
-        setUser(parsedUser);
-        setUserId(parsedId);
-      } catch (e) {
-        console.error("Error loading user from storage:", e);
-        setError("Failed to load user from storage.");
+      if (!rawUser || !rawUserId) {
+        setError("No logged-in user. Please sign in again.");
         setLoading(false);
-      }
-    })();
-  }, []);
-
-  // 🔹 Fetch conversations when tab focused & we know the userId
-  useFocusEffect(
-    useCallback(() => {
-      if (!userId) {
         return;
       }
 
-      let isActive = true;
+      const parsedUser: BackendUser = JSON.parse(rawUser);
+      const parsedId = Number(rawUserId);
 
+      if (!parsedUser || !parsedUser.email || isNaN(parsedId)) {
+        setError("Stored user is invalid. Please sign in again.");
+        setLoading(false);
+        return;
+      }
+
+      console.log(`Loading user from storage: ${parsedUser.email} (ID: ${parsedId})`);
+      setUser(parsedUser);
+      setUserId(parsedId);
+    } catch (e) {
+      console.error("Error loading user from storage:", e);
+      setError("Failed to load user from storage.");
+      setLoading(false);
+    }
+  }, []);
+
+  //Reload user data whenever screen is focused (catches account switches)
+  useFocusEffect(
+    useCallback(() => {
+      loadUserFromStorage();
+    }, [loadUserFromStorage])
+  );
+
+  // Clear conversations when userId changes (account switch)
+  useEffect(() => {
+    setConversations([]);
+    setLoading(true);
+  }, [userId]);
+
+  //  Fetch conversations when tab focused & we know the userId
+  useFocusEffect(
+    useCallback(() => {
+      if (!userId) return;
+  
+      let isActive = true;
+  
       const fetchConversations = async () => {
         try {
           setLoading(true);
           setError(null);
-
+          setConversations([]); // Clear old conversations before fetching new ones
+  
           const encoded = btoa("user:password");
-
+  
+          // Fetch conversations for the logged-in user
           const res = await fetch(
             `https://hood-deals-3827cb9a0599.herokuapp.com/conversations?userId=${userId}&page=0&size=20`,
             {
@@ -106,22 +118,22 @@ export default function InboxPage() {
               },
             }
           );
-
+  
           if (!res.ok) {
             const body = await res.text();
             console.log("Error /conversations:", res.status, body);
-            throw new Error(
-              `Failed to fetch conversations: ${res.status}`
-            );
+            throw new Error(`Failed to fetch conversations: ${res.status}`);
           }
-
+  
           const data = await res.json();
           if (!isActive) return;
+  
+          // Spring Data Page response has structure: { content: [...], totalElements, totalPages, etc. }
+          const items: Conversation[] = data.content ?? [];
 
-          const items: Conversation[] = Array.isArray(data)
-            ? data
-            : data.content ?? [];
-
+          console.log(`Conversations loaded for userId ${userId}:`, items.length);
+  
+          // Backend already filters by userId, so we can use the data directly
           setConversations(items);
         } catch (err: any) {
           if (!isActive) return;
@@ -131,26 +143,28 @@ export default function InboxPage() {
           if (isActive) setLoading(false);
         }
       };
-
+  
       fetchConversations();
-
+  
       return () => {
         isActive = false;
       };
     }, [userId])
   );
+  
 
   const openConversation = (item: Conversation) => {
     router.push({
       pathname: "/conversation",
-      params: { conversationId: item.id,
+      params: { 
+        conversationId: item.id,
         receiverName: item.receiverName,
         receiverPicture: item.receiverPicture
-       },
+      },
     });
   };
 
-  // 🔹 Loading state
+
   if (loading && !error) {
     return (
       <SafeAreaView style={styles.safeArea}>
@@ -161,7 +175,7 @@ export default function InboxPage() {
     );
   }
 
-  // 🔹 Error state
+
   if (error) {
     return (
       <SafeAreaView style={styles.safeArea}>
@@ -172,7 +186,7 @@ export default function InboxPage() {
     );
   }
 
-  // 🔹 Normal render
+
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={[styles.container, { width: containerWidth }]}>
