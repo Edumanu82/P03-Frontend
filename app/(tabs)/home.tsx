@@ -1,3 +1,5 @@
+import { createConversation } from "@/api/chat";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { router } from "expo-router";
@@ -13,8 +15,6 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import { createConversation } from "@/api/chat";
 
 type RootStackParamList = {
   home: undefined;
@@ -29,8 +29,8 @@ type HomeScreenNavigationProp = NativeStackNavigationProp<
 type Listing = {
   id: number;
   user_id: number;
-  userName: string;
-  userPicture?: string | null;
+  userName: string | null;
+  userPicture: string | null;
   title: string;
   description?: string;
   price: number;
@@ -68,6 +68,8 @@ export default function HomeScreen() {
   const [error, setError] = useState<string | null>(null);
   const [selectedListing, setSelectedListing] = useState<Listing | null>(null);
   const [modalVisible, setModalVisible] = useState(false);
+  const [myUserId, setMyUserId] = useState<number | null>(null);
+
 
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [selectedPriceRange, setSelectedPriceRange] = useState("All");
@@ -117,13 +119,24 @@ export default function HomeScreen() {
 
       const me = await meRes.json();
       const myUserId = me.id as number;
+
       console.log("Resolved myUserId:", myUserId);
 
       //  Seller is the owner of the listing
       const otherUserId = listing.user_id;
 
+      const otherUrl = `${BASE_URL}/api/user/by-userid?userid=${encodeURIComponent(otherUserId)}`;
+      const otherRes = await fetch(otherUrl, {
+        headers: {
+        Authorization: BASIC_AUTH,
+        "Content-Type": "application/json",
+      },
+      });
+      const body2 = await otherRes.json();
+      console.log("OTHER USERE", body2);
+
       // Create or reuse conversation
-      const convo = await createConversation(myUserId, otherUserId, listing.id);
+      const convo = await createConversation(myUserId, otherUserId, listing.id, body2.name , body2.picture);
       console.log("Conversation created/loaded from HomeScreen:", convo);
 
       //  Close modal and open conversation screen
@@ -134,6 +147,8 @@ export default function HomeScreen() {
         params: {
           conversationId: String(convo.id),
           otherUserId: String(otherUserId), // 👈 crucial so ConversationScreen knows the receiver
+          receiverName: String(body2.name),
+          receiverPicture: String(body2.picture),
         },
       });
     } catch (err) {
@@ -143,40 +158,50 @@ export default function HomeScreen() {
 
   useFocusEffect(
     React.useCallback(() => {
-      const fetchListings = async () => {
+      const fetchUserAndListings = async () => {
         try {
-          setLoading(true);
-
-          const username = "user";
-          const password = "password";
-          const base64Credentials = btoa(`${username}:${password}`);
-
+          // Load current user
+          const stored = await loadUserFromStorage();
+          if (stored?.email) {
+            const res = await fetch(
+              `${BASE_URL}/api/user/by-email?email=${encodeURIComponent(stored.email)}`,
+              {
+                headers: { Authorization: BASIC_AUTH, "Content-Type": "application/json" },
+              }
+            );
+            if (res.ok) {
+              const me = await res.json();
+              setMyUserId(me.id); // store user ID
+            }
+          }
+  
+          // Fetch listings
           const response = await fetch(
             "https://hood-deals-3827cb9a0599.herokuapp.com/api/listings",
             {
               method: "GET",
               headers: {
-                Authorization: `Basic ${base64Credentials}`,
+                Authorization: BASIC_AUTH,
                 "Content-Type": "application/json",
               },
             }
           );
-
+  
           if (!response.ok) throw new Error(`HTTP error! ${response.status}`);
-
           const data = await response.json();
           setListings(data);
         } catch (err) {
-          console.error("Error fetching listings:", err);
-          setError("Failed to load listings.");
+          console.error("Error fetching data:", err);
+          setError("Failed to load data.");
         } finally {
           setLoading(false);
         }
       };
-
-      fetchListings();
+  
+      fetchUserAndListings();
     }, [])
   );
+  
 
   if (loading) {
     return (
@@ -427,13 +452,15 @@ export default function HomeScreen() {
                               {selectedListing.userName}
                             </Text>
                           </View>
-                          <TouchableOpacity 
-                            style={styles.modalMessageButton} 
-                            activeOpacity={0.8}
-                            onPress={() => onPressMessage(selectedListing)}
-                          >
+                          {myUserId !== selectedListing.user_id && (
+                            <TouchableOpacity
+                              style={styles.modalMessageButton}
+                              activeOpacity={0.8}
+                              onPress={() => onPressMessage(selectedListing)}
+                            >
                               <Text style={styles.modalCloseButtonText}>Message</Text>
-                          </TouchableOpacity>
+                            </TouchableOpacity>
+                          )}
                         </View>
                       )}
                     </View>
