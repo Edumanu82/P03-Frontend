@@ -42,10 +42,14 @@ export async function listConversations(
 export async function createConversation(
   user1Id: number,
   user2Id: number,
-  listingId: number
+  listingId: number,
+  receiverName: string,
+  receiverPicture: string
 ): Promise<Conversation> {
   const url = `${BASE_URL}/conversations`;
   console.log("createConversation →", url);
+  console.log("user2ID", user2Id);
+  console.log("RECEIVER NAME:", receiverName);
 
   const r = await fetch(url, {
     method: "POST",
@@ -53,7 +57,7 @@ export async function createConversation(
       Authorization: BASIC_AUTH,
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({ user1Id, user2Id, listingId }),
+    body: JSON.stringify({ user1Id, user2Id, listingId, receiverName, receiverPicture }),
   });
 
   if (!r.ok) {
@@ -95,10 +99,11 @@ export async function sendMessage(
   conversationId: number,
   senderId: number,
   receiverId: number,
-  content: string
+  content: string,
+  userName: string
 ): Promise<Message> {
   const url = `${BASE_URL}/conversations/${conversationId}/messages`;
-  console.log("sendMessage →", url, { conversationId, senderId, receiverId, content });
+  console.log("sendMessage →", url, { conversationId, senderId, receiverId, content, userName });
 
   const r = await fetch(url, {
     method: "POST",
@@ -106,7 +111,7 @@ export async function sendMessage(
       Authorization: BASIC_AUTH,
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({ senderId, receiverId, content }),
+    body: JSON.stringify({ senderId, receiverId, content, userName }),
   });
 
   if (!r.ok) {

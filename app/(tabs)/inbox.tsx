@@ -20,6 +20,8 @@ type Conversation = {
   listingId: number | null;
   lastMessageAt: string | null;
   createdAt: string | null;
+  receiverName: string | null;
+  receiverPicture: string | null;
 };
 
 type BackendUser = {
@@ -141,7 +143,10 @@ export default function InboxPage() {
   const openConversation = (item: Conversation) => {
     router.push({
       pathname: "/conversation",
-      params: { conversationId: item.id },
+      params: { conversationId: item.id,
+        receiverName: item.receiverName,
+        receiverPicture: item.receiverPicture
+       },
     });
   };
 
@@ -183,15 +188,15 @@ export default function InboxPage() {
             >
               <Image
                 source={
-                  user?.picture
-                    ? { uri: `${user.picture}?t=${Date.now()}` }
+                  item?.receiverPicture
+                    ? { uri: `${item.receiverPicture}?t=${Date.now()}` }
                     : require("../../assets/images/profilepic.png")
                 }
                 style={styles.avatar}
               />
               <View>
                 <Text style={styles.name}>
-                  Conversation #{item.id}
+                  {item.receiverName}
                 </Text>
                 <Text
                   numberOfLines={1}

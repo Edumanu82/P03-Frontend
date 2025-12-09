@@ -45,6 +45,16 @@ export default function Layout() {
           ),
         }}
       />
+        {/* Inbox Screen */}
+        <Tabs.Screen
+        name="inbox"
+        options={{
+          title: 'Inbox',
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="chatbubble-outline" color={color} size={size} />
+          ),
+        }}
+      />
 
       {/* Profile Screen */}
       <Tabs.Screen

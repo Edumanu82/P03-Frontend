@@ -1,8 +1,11 @@
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useLocalSearchParams } from "expo-router";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
   FlatList,
+  Image,
   KeyboardAvoidingView,
   Platform,
   StyleSheet,
@@ -10,17 +13,17 @@ import {
   TextInput,
   TouchableOpacity,
   View,
-  Alert,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 
-import type { Message } from "@/types/chat";
 import { listMessages, sendMessage } from "@/api/chat";
+import type { Message } from "@/types/chat";
 
 type Params = {
   conversationId?: string;
   otherUserId?: string;
+  receiverName?: string;
+  receiverPicture?: string;
 };
 
 const STORAGE_KEYS_TO_TRY = ["user", "authUser", "profile", "googleAuth"];
@@ -56,7 +59,8 @@ export default function ConversationScreen() {
   const [otherUserId, setOtherUserId] = useState<number | null>(
     initialOtherUserId
   );
-
+  const [receiverName, setReceiverName] = useState(params.receiverName || "");
+  const [receiverPicture, setReceiverPicture] = useState(params.receiverPicture || "");
   const [page, setPage] = useState(0);
   const [size] = useState(20);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -123,7 +127,7 @@ export default function ConversationScreen() {
         // If we didn't get otherUserId from params, try to derive from messages
         if (!otherUserId && myUserId && r.content.length > 0) {
           const sample = r.content[0];
-          const derived =
+          const derived = 
             sample.senderId === myUserId
               ? sample.receiverId
               : sample.senderId;
@@ -181,9 +185,19 @@ export default function ConversationScreen() {
       return;
     }
 
+    const meUrl = `${BASE_URL}/api/user/by-userid?userid=${encodeURIComponent(receiverId)}`;
+    const meRes = await fetch(meUrl, {
+      headers: {
+        Authorization: BASIC_AUTH,
+        "Content-Type": "application/json",
+      },
+    });
+    const body2 = await meRes.json();
+    console.log(body2);
+
     setDraft("");
     try {
-      const msg = await sendMessage(conversationId, myUserId, receiverId, content);
+      const msg = await sendMessage(conversationId, myUserId, receiverId, content, body2.name);
       setMessages((prev) => [...prev, msg]);
 
       requestAnimationFrame(() =>
@@ -226,7 +240,26 @@ export default function ConversationScreen() {
         behavior={Platform.OS === "ios" ? "padding" : undefined}
         style={styles.container}
       >
-        {error ? <Text style={styles.error}>{error}</Text> : null}
+        <View style={styles.header}>
+          <View style={styles.headerInner}>
+            {receiverPicture ? (
+              <Image
+                source={{ uri: receiverPicture }}
+                style={styles.headerAvatar}
+              />
+            ) : (
+              <View style={styles.headerAvatarPlaceholder}>
+                <Text style={styles.headerAvatarInitial}>
+                  {receiverName?.charAt(0) || "?"}
+                </Text>
+              </View>
+            )}
+
+            <Text style={styles.headerName}>{receiverName}</Text>
+          </View>
+        </View>
+
+
         <FlatList
           ref={listRef}
           data={messages}
@@ -300,4 +333,53 @@ const styles = StyleSheet.create({
   },
   sendText: { color: "#fff", fontWeight: "600" },
   error: { color: "red", textAlign: "center", marginVertical: 8 },
+  header: {
+    paddingVertical: 12,
+    backgroundColor: "#ffffff",
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: "#e3e3e3",
+    alignItems: "center",
+    justifyContent: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  
+  headerInner: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  
+  headerAvatar: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    marginRight: 10,
+  },
+  
+  headerAvatarPlaceholder: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    marginRight: 10,
+    backgroundColor: "#ddd",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  
+  headerAvatarInitial: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#555",
+  },
+  
+  headerName: {
+    fontSize: 18,
+    fontWeight: "600",
+    color: "#111",
+  },
+  
+  
 });
